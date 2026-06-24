@@ -3,6 +3,11 @@
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
+use App\Mail\PreRegistrationEmail;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 new class extends Component
 {
@@ -19,6 +24,31 @@ new class extends Component
 
     public $showPassword = false;
     public $showConfirmPassword = false;
+
+    public function getPasswordHasMinLengthProperty(): bool
+    {
+        return strlen($this->password) >= 8;
+    }
+
+    public function getPasswordHasLowercaseProperty(): bool
+    {
+        return (bool) preg_match('/[a-z]/', $this->password);
+    }
+
+    public function getPasswordHasUppercaseProperty(): bool
+    {
+        return (bool) preg_match('/[A-Z]/', $this->password);
+    }
+
+    public function getPasswordHasNumberProperty(): bool
+    {
+        return (bool) preg_match('/[0-9]/', $this->password);
+    }
+
+    public function getPasswordHasSymbolProperty(): bool
+    {
+        return (bool) preg_match('/[@$!%*#?&]/', $this->password);
+    }
 
     // Custom messages only for password fields
     protected $messages = [
@@ -38,40 +68,67 @@ new class extends Component
         }
     }
 
-protected function rules(): array
-{
-    return [
-        'name' => [
-            'required',
-            'string',
-            'min:3',
-            'max:20',
-            'regex:/^[^<>]*$/',
-        ],
+    protected function rules(): array
+    {
+        return [
+            'name' => [
+                'required',
+                'string',
+                'min:3',
+                'max:20',
+                'regex:/^[^<>]*$/',
+            ],
 
-        'email' => [
-            'required',
-            'email',
-            'unique:users,email',
-        ],
+            'email' => [
+                'required',
+                'email',
+                'unique:users,email',
+            ],
 
-        'password' => [
-            'required',
-            'string',
-            'min:8',
-            'regex:/[a-z]/',
-            'regex:/[A-Z]/',
-            'regex:/[0-9]/',
-            'regex:/[@$!%*#?&]/',
-            'confirmed',
-        ],
-        'password_confirmation' => [
-            'required',
-            'same:password',
-        ],
-    ];
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'regex:/[a-z]/',
+                'regex:/[A-Z]/',
+                'regex:/[0-9]/',
+                'regex:/[@$!%*#?&]/',
+                'confirmed',
+            ],
+            'password_confirmation' => [
+                'required',
+                'same:password',
+            ],
+        ];
+    }
+
+    public function signup()
+    {
+        $this->validate($this->rules(), $this->messages);
+
+        $existingCode = Cache::get("verify-email-token-{$this->email}");
+
+        if($existingCode){
+            Cache::forget("verify-email-for-{$existingCode}");
+            Cache::forget("verify-email-code-{$this->email}");
+       }
+
+        $code = Str::random(6);
+        Cache::put("verify-email-for-{$code}", $this->email, 15 * 60);
+        Cache::put("verify-email-code-{$this->email}", $code, 15 * 60);
+        Mail::to($this->email)->send(new PreRegistrationEmail($code));
+        session()->flash('verification', true);
+        session()->flash('email', $this->email);
+        $this->redirect(route('preregistration'), navigate:true);
+    }
+
+    public function mount()
+    {
+        if (Auth::check()) {
+            redirect()->route('dashboard');
+        }
+    }
 }
-};
 ?>
 
 <div class="w-100" style="max-width: 500px;">
@@ -89,7 +146,7 @@ protected function rules(): array
                 </div>
 
                 <!-- Signup Form -->
-                <form class="needs-validation">
+                <form class="needs-validation" wire:submit="signup">
                     @csrf
                     <!-- Name Input -->
                     <div class="mb-3">
@@ -116,7 +173,7 @@ protected function rules(): array
                             <div class="text-muted small">Minimum of 8 characters with at least one uppercase letter, one lowercase letter,one number and one special character</div>
                         </div>
                         <div class="position-relative">
-                            <input id="password" type="{{ $showPassword ? 'text' : 'password' }}" placeholder="••••••••" class="@error('password') is-invalid @enderror" required style="padding-right: 50px;" wire:model.live.debounce.500ms="password">
+                            <input id="password" name="password" type="{{ $showPassword ? 'text' : 'password' }}" placeholder="••••••••" class="@error('password') is-invalid @enderror" required style="padding-right: 50px;" wire:model.live.debounce.500ms="password">
                             <button class="position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-4 text-muted" type="button" id="togglePasswordBtn" style="height: 100%; display: flex; align-items: center; z-index: 10;" aria-label="Toggle Password Visibility">
                                 <!-- Eye Icon SVG (Visible by default) -->
                                 @if(!$showPassword)
@@ -134,9 +191,37 @@ protected function rules(): array
                                 @endif  
                             </button>
                         </div>
-                        @error('password')
-                            <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
-                        @enderror
+
+                        @php
+                            $passwordHasMinLength = strlen($password) >= 8;
+                            $passwordHasLowercase = (bool) preg_match('/[a-z]/', $password);
+                            $passwordHasUppercase = (bool) preg_match('/[A-Z]/', $password);
+                            $passwordHasNumber = (bool) preg_match('/[0-9]/', $password);
+                            $passwordHasSymbol = (bool) preg_match('/[@$!%*#?&]/', $password);
+                        @endphp
+                        <div class="mt-3 px-3 py-2 rounded-3 border border-1 border-muted bg-light">
+                            <div class="small text-muted mb-2">Password must contain:</div>
+                            <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasMinLength ? 'text-success' : 'text-muted' }}">
+                                <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasMinLength ? '✓' : '' }}</span>
+                                <span>At least 8 characters</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasLowercase ? 'text-success' : 'text-muted' }}">
+                                <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasLowercase ? '✓' : '' }}</span>
+                                <span>Lowercase letter</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasUppercase ? 'text-success' : 'text-muted' }}">
+                                <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasUppercase ? '✓' : '' }}</span>
+                                <span>Uppercase letter</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasNumber ? 'text-success' : 'text-muted' }}">
+                                <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasNumber ? '✓' : '' }}</span>
+                                <span>Number</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 small mb-0 {{ $passwordHasSymbol ? 'text-success' : 'text-muted' }}">
+                                <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasSymbol ? '✓' : '' }}</span>
+                                <span>Special character (@$!%*#?&)</span>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Password Confirmation Input -->
