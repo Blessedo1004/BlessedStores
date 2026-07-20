@@ -669,6 +669,16 @@ i[class^=flaticon-] {
 .fill-btn:hover {
   color: var(--clr-common-white);
 }
+.fill-btn:disabled,
+.fill-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.fill-btn:disabled::before,
+.fill-btn[disabled]::before {
+  background-color: rgba(177, 139, 94, 0.35);
+}
 .fill-btn:hover .fill-btn-normal {
   opacity: 0;
   transform: translateY(-70%);
@@ -2275,7 +2285,7 @@ Animate wobble-vertical
   left: 0;
   top: 0;
   background-color: #121212;
-  z-index: 999;
+  z-index: 1001;
 }
 
 .bd-loader-wrap {

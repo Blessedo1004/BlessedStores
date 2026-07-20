@@ -2,6 +2,25 @@
 <x-layouts.auth title="Sign In">
   <x-slot:slot>  
     <div class="w-100" style="max-width: 500px;">    
+        @if(session('logout-success'))
+            <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{{session('logout-success')}}</span>
+            </div>
+            
+        @endif
+
+        @if(session('signup-success'))
+            <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{{session('signup-success')}}</span>
+            </div>
+            
+        @endif
         @if ($errors->any())
             <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center" role="alert">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
@@ -15,7 +34,7 @@
             </div>
         @endif
 
-        <!-- Main Login Card -->
+        <!-- Main Sign In Card -->
         <div class="card border-0 shadow-sm rounded-4 auth-card">
             <div class="card-body p-4 p-md-5">
                 

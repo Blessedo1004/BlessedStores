@@ -23,32 +23,8 @@ new class extends Component
     public string $password_confirmation = '';
 
     public $showPassword = false;
+    
     public $showConfirmPassword = false;
-
-    public function getPasswordHasMinLengthProperty(): bool
-    {
-        return strlen($this->password) >= 8;
-    }
-
-    public function getPasswordHasLowercaseProperty(): bool
-    {
-        return (bool) preg_match('/[a-z]/', $this->password);
-    }
-
-    public function getPasswordHasUppercaseProperty(): bool
-    {
-        return (bool) preg_match('/[A-Z]/', $this->password);
-    }
-
-    public function getPasswordHasNumberProperty(): bool
-    {
-        return (bool) preg_match('/[0-9]/', $this->password);
-    }
-
-    public function getPasswordHasSymbolProperty(): bool
-    {
-        return (bool) preg_match('/[@$!%*#?&]/', $this->password);
-    }
 
     // Custom messages only for password fields
     protected $messages = [
@@ -104,22 +80,22 @@ new class extends Component
 
     public function signup()
     {
-        $this->validate($this->rules(), $this->messages);
+        $userData = $this->validate($this->rules(), $this->messages);
 
-        $existingCode = Cache::get("verify-email-token-{$this->email}");
+        $existingCode = Cache::get("preregistration-email-code-{$this->email}");
 
         if($existingCode){
-            Cache::forget("verify-email-for-{$existingCode}");
-            Cache::forget("verify-email-code-{$this->email}");
+            Cache::forget("preregistration-email-for-{$existingCode}");
+            Cache::forget("preregistration-email-code-{$this->email}");
        }
 
         $code = Str::random(6);
-        Cache::put("verify-email-for-{$code}", $this->email, 15 * 60);
-        Cache::put("verify-email-code-{$this->email}", $code, 15 * 60);
+        Cache::put("preregistration-email-for-{$code}", $userData, 15 * 60);
+        Cache::put("preregistration-email-code-{$this->email}", $code, 15 * 60);
         Mail::to($this->email)->send(new PreRegistrationEmail($code));
-        session()->flash('verification', true);
+        session()->flash('auth-flow', true);
         session()->flash('email', $this->email);
-        $this->redirect(route('preregistration'), navigate:true);
+        $this->redirect(route('preregistration-notice'), navigate:true);
     }
 
     public function mount()
@@ -147,7 +123,7 @@ new class extends Component
 
                 <!-- Signup Form -->
                 <form class="needs-validation" wire:submit="signup">
-                    @csrf
+            
                     <!-- Name Input -->
                     <div class="mb-3">
                         <label for="name" class="form-label fw-semibold text-dark small mb-2">Full Name</label>
@@ -252,10 +228,13 @@ new class extends Component
                     </div>
 
                     <!-- Action Button -->
-                    <button type="submit" class="fill-btn w-100 border-0">
-                        <span class="fill-btn-inner">
+                    <button type="submit" class="fill-btn w-100 border-0" wire:loading.attr="disabled">
+                        <span class="fill-btn-inner" wire:loading.remove wire:target="signup">
                             <span class="fill-btn-normal">Sign Up</span>
                             <span class="fill-btn-hover">Sign Up</span>
+                        </span>
+                        <span class="fill-btn-inner" wire:loading wire:target="signup">
+                            <span>Signing Up...</span>
                         </span>
                     </button>
                 </form>

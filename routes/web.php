@@ -9,7 +9,8 @@ Route::get('/', function () {
     return view('home');
 })->name('home');
 
-Route::livewire('/signup', 'auth.⚡signup')->name('signUp');
+Route::livewire('/signup', 'auth.⚡signup')->name('signUp')->middleware('cache.headers:no_store,private');
+Route::livewire('/preregistration-notice', 'auth.⚡preregistration-notice')->name('preregistration-notice');
 
 Route::middleware('cache.headers:no_store,private')->controller(AuthController::class)->group(function(){
     Route::get('/login','showSignIn')->name('login');
