@@ -1,3 +1,8 @@
+import Alpine from 'alpinejs';
+
+window.Alpine = Alpine;
+Alpine.start();
+
 document.addEventListener('DOMContentLoaded', function() {
   // Force reload on back/forward navigation to prevent bfcache issues
   window.addEventListener('pageshow', function(event) {
@@ -5,4 +10,4 @@ document.addEventListener('DOMContentLoaded', function() {
       window.location.reload();
     }
   });
-});  
+});

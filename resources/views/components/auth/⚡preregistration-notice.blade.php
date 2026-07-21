@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\PreRegistrationEmail;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Hash;
 
 new class extends Component
 {
@@ -21,32 +23,85 @@ new class extends Component
     #[Validate('required|string|size:6')]
     public $code;
 
-    public function mount(){
+    public $countdown = 0;
+
+    public function mount()
+    {
         $this->email = session('email');
         if (!$this->email) {
-            return $this->redirect(route('home'), navigate: true);
-        } 
+            return $this->redirect(route('home'));
+        }
+
+        $key = 'resend-code:' . $this->email;
+
+        // The registration email was just sent, so begin its resend cooldown
+        // as soon as this notice is first rendered.
+        if (! RateLimiter::tooManyAttempts($key, 1)) {
+            RateLimiter::hit($key, 60);
+        }
+
+        $this->countdown = RateLimiter::availableIn($key);
     }
 
 
     public function resendCode()
     {
+        $key = 'resend-code:' . $this->email;
+
+        if (RateLimiter::tooManyAttempts($key, 1)) {
+            $seconds = RateLimiter::availableIn($key);
+            $this->countdown = $seconds;
+
+            $this->addError(
+                'code',
+                "Please wait {$seconds} seconds before requesting another code."
+            );
+
+            return;
+        }
+
+        // Allow only 1 resend every 60 seconds
+        RateLimiter::hit($key, 60);
+
         $oldCode = Cache::get("preregistration-email-code-{$this->email}");
         $userData = Cache::get("preregistration-email-for-{$oldCode}");
 
-        if($oldCode && $userData){
+        if ($oldCode && $userData) {
             Cache::forget("preregistration-email-code-{$this->email}");
             Cache::forget("preregistration-email-for-{$oldCode}");
         }
-        
+
         $newCode = Str::random(6);
+
         Cache::put("preregistration-email-for-{$newCode}", $userData, 15 * 60);
         Cache::put("preregistration-email-code-{$this->email}", $newCode, 15 * 60);
+
         Mail::to($this->email)->send(new PreRegistrationEmail($newCode));
-        session()->flash('success', 'A new verification code has been sent to your inbox!');
-    }  
+
+        $this->countdown = RateLimiter::availableIn($key);
+        $this->dispatch('resend-countdown', seconds: $this->countdown);
+
+        session()->flash('success', 'A new verification code has been sent.');
+    }
     
-    public function verifyCode(){
+    public function verifyCode()
+    {
+        $key = 'verify-code:' . $this->email;
+
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+
+            $this->addError(
+                'code',
+                "Too many verification attempts. Please wait {$seconds} seconds and try again."
+            );
+
+            return;
+        }
+
+        // Allow five verification attempts every 60 seconds for each email.
+        RateLimiter::hit($key, 60);
+
         $userData = Cache::get("preregistration-email-for-{$this->code}");
 
         if(!$userData || $userData['email'] !== $this->email){
@@ -59,8 +114,11 @@ new class extends Component
         $user->email = $userData['email'];
         $user->password = Hash::make($userData['password']);
         $user->save();
+        Cache::forget("preregistration-email-for-{$this->code}");
+        Cache::forget("preregistration-email-code-{$this->email}");
+        RateLimiter::clear($key);
         session()->flash('signup-success', 'Account successfully created. You can now sign in');
-        $this->redirect(route('login'), navigate:true);
+        $this->redirect(route('login'));
     }
 };
 ?>
@@ -106,14 +164,30 @@ new class extends Component
                 <form class="needs-validation" wire:submit="verifyCode">
         
                     <!-- Code Input -->
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label for="code" class="form-label fw-semibold text-dark small mb-0">Verification Code</label>
-                                <p wire:click="resendCode" class="text-color-1 text-decoration-none small fw-bold" wire:loading.attr="disabled" style="cursor: pointer;">
-                                    <span wire:loading.remove wire:target="resendCode">Resend Code?</span>
-                                    <span wire:loading wire:target="resendCode">Resending...</span>
-                                </p>
-                           
-                        </div>
+                    <div
+                        class="d-flex justify-content-between align-items-center mb-2"
+                        x-data="resendCooldown({{ $countdown }})"
+                        @resend-countdown.window="restart($event.detail.seconds)"
+                    >
+                        <label for="code" class="form-label fw-semibold text-dark small mb-0">
+                            Verification Code
+                        </label>
+
+                        <button
+                            type="button"
+                            class="fill-btn border-0"
+                            @click="send()"
+                            :disabled="remaining > 0 || sending"
+                            style="cursor:pointer;"
+                        >
+                            <span x-show="!sending" class="fill-btn-inner">
+                                <span x-text="remaining > 0 ? `Resend (${remaining}s)` : 'Resend Code'"></span>
+                            </span>
+                            <span x-cloak x-show="sending">
+                                <span>Resending...</span>
+                            </span>
+                        </button>
+                    </div>
                         <input id="code" type="text" placeholder="Enter verification code" required wire:model="code" class="mb-3">
                            
 
@@ -129,6 +203,55 @@ new class extends Component
                     </button>
                 </form>
 
+                <script>
+                    window.resendCooldown = function (initialSeconds) {
+                        return {
+                            remaining: Number(initialSeconds) || 0,
+                            deadline: null,
+                            timer: null,
+                            sending: false,
+
+                            init() {
+                                this.restart(this.remaining);
+                            },
+
+                            restart(seconds) {
+                                this.stop();
+                                this.remaining = Math.max(0, Number(seconds) || 0);
+
+                                if (this.remaining === 0) return;
+
+                                this.deadline = Date.now() + (this.remaining * 1000);
+                                this.timer = setInterval(() => this.tick(), 250);
+                            },
+
+                            tick() {
+                                this.remaining = Math.max(0, Math.ceil((this.deadline - Date.now()) / 1000));
+
+                                if (this.remaining === 0) this.stop();
+                            },
+
+                            send() {
+                                if (this.remaining > 0 || this.sending) return;
+
+                                this.sending = true;
+                                const componentId = this.$root.closest('[wire\\:id]').getAttribute('wire:id');
+
+                                Promise.resolve(window.Livewire.find(componentId).resendCode())
+                                    .finally(() => this.sending = false);
+                            },
+
+                            stop() {
+                                if (this.timer) clearInterval(this.timer);
+                                this.timer = null;
+                            },
+
+                            destroy() {
+                                this.stop();
+                            },
+                        };
+                    };
+                </script>
             </div>
         </div>
 </div>    
