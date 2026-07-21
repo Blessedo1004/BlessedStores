@@ -34,12 +34,6 @@ new class extends Component
 
         $key = 'resend-code:' . $this->email;
 
-        // The registration email was just sent, so begin its resend cooldown
-        // as soon as this notice is first rendered.
-        if (! RateLimiter::tooManyAttempts($key, 1)) {
-            RateLimiter::hit($key, 60);
-        }
-
         $this->countdown = RateLimiter::availableIn($key);
     }
 

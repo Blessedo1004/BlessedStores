@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
 use App\Mail\PreRegistrationEmail;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 new class extends Component
@@ -92,11 +93,11 @@ new class extends Component
         $code = Str::random(6);
         Cache::put("preregistration-email-for-{$code}", $userData, 15 * 60);
         Cache::put("preregistration-email-code-{$this->email}", $code, 15 * 60);
-        \Illuminate\Support\Facades\RateLimiter::hit('resend-code:' . $this->email, 60);
         Mail::to($this->email)->send(new PreRegistrationEmail($code));
+        RateLimiter::hit('resend-code:' . $this->email, 60);
         session()->flash('auth-flow', true);
         session()->flash('email', $this->email);
-        $this->redirect(route('preregistration-notice'));
+        $this->redirect(route('preregistration-notice'), navigate:true);
     }
 
     public function mount()
