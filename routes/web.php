@@ -11,6 +11,9 @@ Route::get('/', function () {
 
 Route::livewire('/signup', 'auth.⚡signup')->name('signUp')->middleware('cache.headers:no_store,private');
 Route::livewire('/preregistration-notice', 'auth.⚡preregistration-notice')->name('preregistration-notice');
+Route::livewire('/forgot-password', 'auth.⚡forgot-password')->name('forgot-password');
+Route::livewire('/forgot-password-verify', 'auth.⚡forgot-password-verify')->name('forgot-password-verify');
+Route::livewire('/reset-password', 'auth.⚡reset-password')->name('reset-password');
 
 Route::middleware('cache.headers:no_store,private')->controller(AuthController::class)->group(function(){
     Route::get('/login','showSignIn')->name('login');

@@ -97,7 +97,7 @@ new class extends Component
         RateLimiter::hit('resend-code:' . $this->email, 60);
         session()->flash('auth-flow', true);
         session()->flash('email', $this->email);
-        $this->redirect(route('preregistration-notice'), navigate:true);
+        $this->redirect(route('preregistration-notice'), navigate: true);
     }
 
     public function mount()

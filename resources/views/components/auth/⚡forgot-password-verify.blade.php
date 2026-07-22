@@ -6,16 +6,15 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\PreRegistrationEmail;
+use App\Mail\ForgotPasswordEmail;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Hash;
 
 new class extends Component
 {
     #[Layout('components.layouts.auth')] 
-    #[Title('Preregistration Notice')]
+    #[Title('Forgot Password')]
 
     #[Validate('required|email')]
     public $email;
@@ -29,7 +28,7 @@ new class extends Component
     {
         $this->email = session('email');
         if (!$this->email) {
-            return $this->redirect(route('signUp'));
+            return $this->redirect(route('login'));
         }
 
         $key = 'resend-code:' . $this->email;
@@ -57,20 +56,20 @@ new class extends Component
         // Allow only 1 resend every 60 seconds
         RateLimiter::hit($key, 60);
 
-        $oldCode = Cache::get("preregistration-email-code-{$this->email}");
-        $userData = Cache::get("preregistration-email-for-{$oldCode}");
+        $oldCode = Cache::get("forgot-password-email-code-{$this->email}");
+        $email= Cache::get("forgot-password-email-for-{$oldCode}");
 
-        if ($oldCode && $userData) {
-            Cache::forget("preregistration-email-code-{$this->email}");
-            Cache::forget("preregistration-email-for-{$oldCode}");
+        if ($oldCode && $email) {
+            Cache::forget("forgot-password-email-code-{$this->email}");
+            Cache::forget("forgot-password-email-for-{$oldCode}");
         }
 
         $newCode = Str::random(6);
 
-        Cache::put("preregistration-email-for-{$newCode}", $userData, 15 * 60);
-        Cache::put("preregistration-email-code-{$this->email}", $newCode, 15 * 60);
+        Cache::put("forgot-password-email-for-{$newCode}", $this->email, 15 * 60);
+        Cache::put("forgot-password-email-code-{$this->email}", $newCode, 15 * 60);
 
-        Mail::to($this->email)->send(new PreRegistrationEmail($newCode));
+        Mail::to($this->email)->send(new ForgotPasswordEmail($newCode));
 
         $this->countdown = RateLimiter::availableIn($key);
         $this->dispatch('resend-countdown', seconds: $this->countdown);
@@ -96,23 +95,24 @@ new class extends Component
         // Allow five verification attempts every 60 seconds for each email.
         RateLimiter::hit($key, 60);
 
-        $userData = Cache::get("preregistration-email-for-{$this->code}");
+        $this->validate();
+        $email = Cache::get("forgot-password-email-for-{$this->code}");
 
-        if(!$userData || $userData['email'] !== $this->email){
+        if(!$email || $email !== $this->email){
             $this->addError('code', 'The verification code is invalid or has expired.');
             return;
         }
 
-        $user = new User();   
-        $user->name = $userData['name'];
-        $user->email = $userData['email'];
-        $user->password = Hash::make($userData['password']);
-        $user->save();
-        Cache::forget("preregistration-email-for-{$this->code}");
-        Cache::forget("preregistration-email-code-{$this->email}");
+        Cache::forget("forgot-password-email-for-{$this->code}");
+        Cache::forget("forgot-password-email-code-{$this->email}");
+
+        $token = Str::random(60);
+        Cache::put("forgot-password-token-for-{$this->email}", $token, 2 * 60);
+        Cache::put("forgot-password-email-for-{$token}", $this->email, 2 * 60);
         RateLimiter::clear($key);
-        session()->flash('signup-success', 'Account successfully created. You can now sign in');
-        $this->redirect(route('login'));
+        // session()->flash('forgot-password-token', $token);
+        session()->flash('success', 'Email verified successfully. You can now reset your password.');
+        $this->redirect(route('reset-password', ['token' => $token]), navigate: true);
     }
 };
 ?>

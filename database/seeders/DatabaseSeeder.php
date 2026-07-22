@@ -22,5 +22,9 @@ class DatabaseSeeder extends Seeder
             'email' => 'blessedvictorigwe@gmail.com',
             'role' => 'super-admin'
         ]);
+
+        $this->call([
+            AdminSeeder::class,
+        ]);
     }
 }

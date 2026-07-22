@@ -7,7 +7,7 @@
 
     <title>{{ $title }} | {{ config('app.name', 'Blessed Store') }}</title>
 
-    <link rel="shortcut icon" type="image/x-icon" href="{{asset('imgs/logo/favicon.png')}}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{asset('imgs/logo/logo.png')}}">
 
     <!-- Google Fonts - Sora -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

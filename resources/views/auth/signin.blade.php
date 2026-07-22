@@ -61,7 +61,7 @@
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <label for="password" class="form-label fw-semibold text-dark small mb-0">Password</label>
-                                <a href="/forgot-password" class="text-color-1 text-decoration-none small fw-bold">
+                                <a href="{{ route('forgot-password') }}" class="text-color-1 text-decoration-none small fw-bold" wire:navigate>
                                     Forgot password?
                                 </a>
                            

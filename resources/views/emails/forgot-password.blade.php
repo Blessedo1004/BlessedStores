@@ -30,14 +30,13 @@
       <div class="email-header">
         <img class="brand" src="{{ asset('imgs/logo/logo.png') }}" alt="logo">
         <div>
-          <div style="font-weight:700;color:#222">BlessedStore</div>
-          <div style="font-size:12px;color:#8b8b8b">Verify your email</div>
+          <div style="font-weight:700;color:#222">BlessedStores</div>
+          <div style="font-size:12px;color:#8b8b8b">Reset your password</div>
         </div>
       </div>
 
       <div class="email-content">
-        <p class="lead">Almost done — verify your email</p>
-        <p class="muted">Thanks for signing up. To complete your registration, please verify your email address using the code below. This code expires in 15 minutes.</p>
+        <p class="muted">To reset your password, please verify your email address using the code below. This code expires in 15 minutes.</p>
 
         <div class="code-box" role="status" aria-label="Verification code">
           <div class="code">{{ $code }}</div>
