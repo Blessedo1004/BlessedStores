@@ -107,12 +107,13 @@ new class extends Component
         Cache::forget("forgot-password-email-code-{$this->email}");
 
         $token = Str::random(60);
-        Cache::put("forgot-password-token-for-{$this->email}", $token, 2 * 60);
-        Cache::put("forgot-password-email-for-{$token}", $this->email, 2 * 60);
+        Cache::put("forgot-password-token-{$this->email}", $token, 2 * 60);
+        Cache::put("forgot-password-email-{$token}", $this->email, 2 * 60);
         RateLimiter::clear($key);
         // session()->flash('forgot-password-token', $token);
         session()->flash('success', 'Email verified successfully. You can now reset your password.');
-        $this->redirect(route('reset-password', ['token' => $token]), navigate: true);
+        session()->flash('email', $this->email);
+        $this->redirect(route('reset-password'), navigate: true);
     }
 };
 ?>
