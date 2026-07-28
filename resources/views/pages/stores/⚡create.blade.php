@@ -75,7 +75,8 @@ new class extends Component
             'social_media' => [
                 'required',
                 'array',
-                'min:1'
+                'min:1',
+                'max:5'
             ],
 
     ];
@@ -83,6 +84,11 @@ new class extends Component
 
     public function addSocialMedia()
     {
+        if (count($this->social_media) >= 5) {
+            $this->addError('social_media', 'You may only add up to 5 social media entries.');
+            return;
+        }
+
         // Validate the platform and username fields
         $this->validate([
             'platform' => 'required|string',
@@ -226,6 +232,9 @@ new class extends Component
                             @error('platform')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
+                            @error('social_media')
+                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="col-12 col-md-6">
@@ -243,8 +252,7 @@ new class extends Component
                         </div>
 
                             <div class="col-12">
-                                <div id="social-badges" class="d-flex flex-wrap gap-2 mt-3">
-                                    <!-- Static example badge (CSS-only preview) -->
+                                <div id="social-badges" class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
                                     @foreach ($this->social_media as $social)
                                         <div class="social-badge">
                                             <div class="platform">

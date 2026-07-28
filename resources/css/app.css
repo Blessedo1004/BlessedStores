@@ -18,7 +18,7 @@ a{
     cursor: pointer;
 }
 
-input[type="file"] {
+input {
     display: block;
     width: 100%;
     padding: 12px 14px;
@@ -30,7 +30,7 @@ input[type="file"] {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-input[type="file"]:focus {
+input:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 4px rgba(177, 139, 94, 0.08);
@@ -337,13 +337,7 @@ select:focus {
 .fill-btn-red:focus {
     color: #ffffff;
 }
-/* Social badge styling (used in add store) */
-#social-badges, .social-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-}
+
 
 .social-badge {
     background: #ffffff;
