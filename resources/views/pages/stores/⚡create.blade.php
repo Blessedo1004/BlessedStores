@@ -89,13 +89,13 @@ new class extends Component
             return;
         }
 
-        // Validate the platform and username fields
+        // Validate the platform and user_name fields
         $this->validate([
             'platform' => 'required|string',
             'user_name' => 'required|string',
         ]);
 
-        // Add the social media platform and username to the socialMedia array
+        // Add the social media platform and user_name to the social_media array
         $this->social_media[] = [
             'platform' => $this->platform,
             'user_name' => $this->user_name,
