@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Models\Store;
 use App\Models\Social;
 use Illuminate\Support\Facades\Mail;
-use App\Mails\StoreRegistrationEmail;
+use App\Mail\StoreRegistrationEmail;
 
 new class extends Component
 {
@@ -22,8 +22,8 @@ new class extends Component
     public $logo;
     public string $description = ' ';
     public string $platform = ' ';
-    public string $username = ' ';
-    public array $socialMedia = [];
+    public string $user_name = ' ';
+    public array $social_media = [];
 
     public function updated($property)
     {
@@ -56,7 +56,7 @@ new class extends Component
             'phone_number' => [
                 'required',
                 'string',
-                'size:10',
+                'size:11',
             ],
              'logo' => [
                 'required',
@@ -67,10 +67,10 @@ new class extends Component
                 'required',
                 'string',
                 'min:10',
-                'max:30',
+                'max:100',
                 'regex:/^[^<>]*$/',
             ],
-            'socialMedia' => [
+            'social_media' => [
                 'required',
                 'array',
                 'min:1'
@@ -84,25 +84,25 @@ new class extends Component
         // Validate the platform and username fields
         $this->validate([
             'platform' => 'required|string',
-            'username' => 'required|string',
+            'user_name' => 'required|string',
         ]);
 
         // Add the social media platform and username to the socialMedia array
-        $this->socialMedia[] = [
+        $this->social_media[] = [
             'platform' => $this->platform,
-            'username' => $this->username,
+            'user_name' => $this->user_name,
         ];
 
         $this->platform = '';
-        $this->username = '';
+        $this->user_name = '';
     }
 
     public function removeSocialMedia($index)
     {
         // Remove the social media entry at the specified index
-        unset($this->socialMedia[$index]);
+        unset($this->social_media[$index]);
         // Re-index the array to maintain proper indices
-        $this->socialMedia = array_values($this->socialMedia);
+        $this->social_media = array_values($this->social_media);
     }
 
     public function save(){
@@ -111,8 +111,9 @@ new class extends Component
         $userData = User::create([
             'name' => $this->name,
             'email' => $this->email,
-            'password' = $password
-        ])
+            'password' => $password,
+            'role' => 'store'
+        ]);
 
         $storeData = Store::create([
             'user_id' => $userData->id,
@@ -120,19 +121,21 @@ new class extends Component
             'phone_number' => $this->phone_number,
             'logo' => $this->logo,
             'description' => $this->description
-        ])
+        ]);
 
         $socials = new Social();
-        if(count($this->socialMedia) == 1){
+        if(count($this->social_media) == 1){
             $socials->store_id = $storeData->id;
-            $socials->platform = $this->socialMedia['platform'];
-            $socials->user_name = $this->socialMedia['user_name'];
+            $socials->platform = $this->social_media['platform'];
+            $socials->user_name = $this->social_media['user_name'];
+            $socials->save();
         }
         else {
-            foreach($this->socialMedia as $index => $socials){
-            $socials->store_id = $storeData->id;
-            $socials->platform = $this->socialMedia['platform'];
-            $socials->user_name = $this->socialMedia['user_name'];
+            foreach($this->social_media as $index => $social){
+                $socials->store_id = $storeData->id;
+                $socials->platform = $social['platform'];
+                $socials->user_name = $social['user_name'];
+                $socials->save();
             }
         }
 
@@ -206,7 +209,7 @@ new class extends Component
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold text-dark small mb-2">Description (optional)</label>
+                            <label class="form-label fw-semibold text-dark small mb-2">Description</label>
                             <textarea rows="3" placeholder="Short description about the store" wire:model.live.debounce.500ms="description"></textarea>
                             @error('description')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
@@ -231,13 +234,13 @@ new class extends Component
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Social Media Username</label>
                             <div class="d-flex gap-2 align-items-center">
-                                <input type="text" id="social_username" placeholder="yourusername" wire:model="username">
+                                <input type="text" id="social_username" placeholder="yourusername" wire:model="user_name">
                                 <button type="button" id="addSocialBtn" class="btn btn-outline-secondary rounded-pill px-3" wire:click="addSocialMedia" wire:loading.attr="disabled">
                                     <span wire:loading.remove wire:target="addSocialMedia">Add</span>  
                                     <span wire:loading wire:target="addSocialMedia">Adding...</span> 
                                 </button>
                             </div>
-                            @error('username')
+                            @error('user_name')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror 
                         </div>
@@ -245,11 +248,11 @@ new class extends Component
                             <div class="col-12">
                                 <div id="social-badges" class="d-flex flex-wrap gap-2 mt-3">
                                     <!-- Static example badge (CSS-only preview) -->
-                                    @foreach ($this->socialMedia as $social)
+                                    @foreach ($this->social_media as $social)
                                         <div class="social-badge">
                                             <div class="platform">
                                                 <div class="platform-name">{{ $social['platform'] }}</div>
-                                                <div class="username">{{ $social['username'] }}</div>
+                                                <div class="username">{{ $social['user_name'] }}</div>
                                             </div>
                                         <button type="button" class="remove-btn" aria-label="Remove" wire:click="removeSocialMedia({{ $loop->index }})" wire:loading.attr="disabled">&times;</button>
                                     </div>
