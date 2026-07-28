@@ -34,6 +34,23 @@
         
     @endif
 
+     <!-- preloader start -->
+   <div id="preloader">
+      <div class="bd-loader-inner">
+         <div class="bd-loader">
+            <span class="bd-loader-item"></span>
+            <span class="bd-loader-item"></span>
+            <span class="bd-loader-item"></span>
+            <span class="bd-loader-item"></span>
+            <span class="bd-loader-item"></span>
+            <span class="bd-loader-item"></span>
+            <span class="bd-loader-item"></span>
+            <span class="bd-loader-item"></span>
+         </div>
+      </div>
+   </div>
+   <!-- preloader end -->    
+
     <div class="dashboard-layout">
         
         <!-- Sidebar Navigation -->
@@ -102,7 +119,7 @@
                     @endcan
 
                     @if (Gate::allows('super-admin') || Gate::allows('admin'))
-                          <a class="nav-link" href="#" wire:navigate>
+                          <a class="nav-link" href="{{ route('stores') }}" wire:navigate>
                               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                   <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21V16.5h-3V21m-6.213-9.103V18.75a.75.75 0 0 0 .75.75h14.25a.75.75 0 0 0 .75-.75v-6.853m-15.75 0a.75.75 0 0 1 .462-.692l7.5-3a.75.75 0 0 1 .576 0l7.5 3a.75.75 0 0 1 .462.692M3.75 12h16.5" />
                               </svg>
@@ -121,13 +138,13 @@
             
             <!-- Top Dashboard Header -->
             <header class="dashboard-header d-flex align-items-center justify-content-between">
-              @if(Gate::allows('customer') || Gate::allows('store'))
                 <div class="d-flex align-items-center gap-3">
                     <button class="btn btn-link text-dark p-0 sidebar-toggle-btn d-lg-none" id="openSidebarBtn">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
+                    @if(Gate::allows('customer') || Gate::allows('store'))
                     <div class="position-relative d-none d-md-block">
                         <span class="position-absolute start-0 top-50 translate-middle-y ps-3 text-muted">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -136,8 +153,9 @@
                         </span>
                         <input type="text" class="header-search-bar" placeholder="Search orders, products...">
                     </div>
+                     @endif
                 </div> 
-              @endif
+             
 
 
                 <!-- User Profile & Notifications dropdown -->
@@ -170,25 +188,8 @@
           {{ $slot }}  
         </main>
     </div>
-
-    <!-- Scripts for responsive menu toggling -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.getElementById('dashboardSidebar');
-            const openBtn = document.getElementById('openSidebarBtn');
-            const closeBtn = document.getElementById('closeSidebarBtn');
-
-            if (sidebar && openBtn && closeBtn) {
-                openBtn.addEventListener('click', function() {
-                    sidebar.classList.add('show');
-                });
-
-                closeBtn.addEventListener('click', function() {
-                    sidebar.classList.remove('show');
-                });
-            }
-        });
-    </script>
+     <script src="{{asset('js/jquery-3.6.0.min.js')}}"></script>
+     <script src="{{asset('js/main.js')}}"></script>
     @livewireScripts
 </body>
 </html>

@@ -75,7 +75,7 @@
                     <!-- Email Input -->
                     <div class="mb-3">
                         <label for="email" class="form-label fw-semibold text-dark small mb-2">Email Address</label>
-                        <input id="email" type="email" name="email" placeholder="name@example.com" value="{{ old('email') }}" required autofocus autocomplete="username">
+                        <input id="email" type="email" name="email" placeholder="name@example.com" value="{{ old('email') }}" required autofocus>
                     </div>
 
                     <!-- Password Input -->
@@ -88,7 +88,7 @@
                            
                         </div>
                         <div class="position-relative">
-                            <input id="password" type="password" name="password" placeholder="••••••••" required autocomplete="current-password" style="padding-right: 50px;">
+                            <input id="password" type="password" name="password" placeholder="••••••••" required style="padding-right: 50px;">
                             <button class="position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-4 text-muted" type="button" id="togglePasswordBtn" style="height: 100%; display: flex; align-items: center; z-index: 10;" aria-label="Toggle Password Visibility">
                                 <!-- Eye Icon SVG -->
                                 <svg id="eyeOpenIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">

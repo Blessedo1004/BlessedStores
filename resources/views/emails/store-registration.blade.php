@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reset your password</title>
+  <title>Store Registration</title>
   <style>
     /* Reset */
     body,table,td{margin:0;padding:0;border:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
@@ -30,17 +30,20 @@
       <div class="email-header">
         <img class="brand" src="{{ asset('imgs/logo/logo.png') }}" alt="logo">
         <div>
-          <div style="font-weight:700;color:#222">BlessedStores</div>
-          <div style="font-size:12px;color:#8b8b8b">Password Reset</div>
+          <div style="font-weight:700;color:#222">BlessedStore</div>
+          <div style="font-size:12px;color:#8b8b8b">Store Registration</div>
         </div>
       </div>
 
       <div class="email-content">
-        <p class="muted">The password for your account has been reset successfully.</p>
-        <p class="muted">Time of Change: {{ now()->format('M d, Y, g:i A') }} (WAT)</p>
-        <hr style="border:none;border-top:1px solid #f0f0f0;margin:18px 0">
+        <p class="lead">Hi {{ $name }}, your store, {{ $store_name }} has been registered successfully</p>
+        <p class="muted">You can log into your account using your email address and your password below</p>
 
-        <p class="muted" style="margin:0">If you did not request this, contact our support team immediately.</p>
+        <div class="code-box" role="status" aria-label="Verification code">
+          <div class="code">{{ $password }}</div>
+        </div>
+
+        <p class="hint">You are advised to change your password to a stronger one after you log in.</p>
       </div>
 
       <div class="email-footer">

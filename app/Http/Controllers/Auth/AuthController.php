@@ -32,8 +32,10 @@ class AuthController extends Controller
           return redirect()->intended(route('dashboard'))->with('loginSuccess', 'Login Successful');
       }
 
-      return back()->withErrors([
-          'login' => 'Invalid Credentials.',
-      ]);
+      return back()
+          ->withInput($request->only('email'))
+          ->withErrors([
+              'login' => 'Invalid Credentials.',
+          ]);
   }
 }

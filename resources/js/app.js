@@ -1,3 +1,23 @@
+  // panel sidebar navigation
+  function sideBarNavigation (){
+    const sidebar = document.getElementById('dashboardSidebar');
+    const openBtn = document.getElementById('openSidebarBtn');
+    const closeBtn = document.getElementById('closeSidebarBtn');
+
+    if (sidebar && openBtn && closeBtn) {
+        openBtn.addEventListener('click', function() {
+            sidebar.classList.add('show');
+        });
+
+        closeBtn.addEventListener('click', function() {
+            sidebar.classList.remove('show');
+        });
+    }
+  } 
+
+  document.addEventListener('DOMContentLoaded', sideBarNavigation)
+  document.addEventListener('livewire:navigated', sideBarNavigation)
+
 document.addEventListener('DOMContentLoaded', function() {
   // Force reload on back/forward navigation to prevent bfcache issues
   window.addEventListener('pageshow', function(event) {
@@ -7,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+//Resend code countdown
 window.resendCooldown = function (initialSeconds) {
   return {
     remaining: Number(initialSeconds) || 0,
@@ -53,4 +74,6 @@ window.resendCooldown = function (initialSeconds) {
       this.stop();
     },
   };
+
+   
 };

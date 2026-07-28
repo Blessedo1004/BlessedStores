@@ -14,6 +14,31 @@
     max-width: 200px;
 }
 
+a{
+    cursor: pointer;
+}
+
+input[type="file"] {
+    display: block;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #e8e5e0;
+    border-radius: 12px;
+    background-color: #ffffff;
+    color: #2b2b2b;
+    font-size: 1.5rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type="file"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(177, 139, 94, 0.08);
+}
+
+textarea{
+    resize: none;
+}
 .auth-card{
     max-height: 90vh;
     overflow-y: auto;
@@ -189,6 +214,173 @@
     border-color: var(--primary-color);
     background-color: #ffffff;
     box-shadow: 0 0 0 4px rgba(177, 139, 94, 0.08);
+}
+
+select {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 14px;
+    border: 1px solid #e8e5e0;
+    border-radius: 12px;
+    background-color: #ffffff;
+    color: #2b2b2b;
+    font-size: 1.5rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(177, 139, 94, 0.08);
+    outline: none;
+}
+
+.fill-btn-red {
+  background-color: #dc3545;
+  color: #ffffff;
+  border-color: #dc3545;
+  font-size: 16px;
+  font-weight: var(--bd-fw-medium);
+  height: 60px;
+  display: -webkit-box;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: -webkit-flex;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 35px;
+  border-radius: 50px;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  display: inline-flex;
+  text-transform: uppercase;
+  transition: 0.5s;
+  gap: 5px;
+}
+
+.fill-btn-red::before {
+    content: "";
+    height: 450px;
+    width: 200%;
+    border-radius: 50%;
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: 0.5s;
+}
+
+.fill-btn-red i {
+    color: #ffffff;
+}
+
+.fill-btn-red .fill-btn-inner {
+    position: relative;
+}
+
+.fill-btn-red .fill-btn-hover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    transform: translateY(70%);
+}
+
+.fill-btn-red:hover {
+    color: #ffffff;
+}
+
+.fill-btn-red:disabled,
+.fill-btn-red[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.fill-btn-red:disabled::before,
+.fill-btn-red[disabled]::before {
+  background-color: rgba(220, 53, 69, 0.35);
+}
+
+.fill-btn-red:hover .fill-btn-normal {
+    opacity: 0;
+    transform: translateY(-70%);
+    transition: transform 1.4s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.2s linear;
+}
+
+.fill-btn-red:hover .fill-btn-hover {
+    opacity: 1;
+    transform: translateY(0);
+    transition: transform 1.4s cubic-bezier(0.19, 1, 0.22, 1), opacity 1.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.fill-btn-red:hover::before {
+    transform: translate(-50%, -80%);
+}
+
+.fill-btn-red:focus {
+    color: #ffffff;
+}
+/* Social badge styling (used in add store) */
+#social-badges, .social-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.social-badge {
+    background: #ffffff;
+    border: 1px solid #ebe8e2;
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--card-shadow);
+    min-width: 160px;
+}
+
+.social-badge .platform {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+}
+
+.social-badge .platform-name {
+    font-size: 1.25rem;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+.social-badge .username {
+    font-size: 1.25rem;
+    color: #2b2b2b;
+    font-weight: 600;
+}
+
+.social-badge .remove-btn {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: #b93b3b;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.social-badge .remove-btn:hover {
+    background: rgba(220,53,69,0.08);
 }
 
 /* Chart card placeholders */

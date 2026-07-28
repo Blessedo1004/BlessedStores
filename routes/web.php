@@ -22,6 +22,8 @@ Route::middleware('cache.headers:no_store,private')->controller(AuthController::
 
 Route::group(['middleware' => ['auth', 'cache.headers:no_store,private']], function () {
    Route::livewire('/dashboard', '⚡dashboard')->name('dashboard');
+   Route::livewire('/stores', 'stores/⚡index')->name('stores');
+   Route::livewire('/stores/add', 'stores/⚡create')->name('stores.add');
 });
 
 Route::get('/payment', [PaymentController::class, 'showForm'])->name('payment.form');

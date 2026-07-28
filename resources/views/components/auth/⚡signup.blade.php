@@ -95,7 +95,6 @@ new class extends Component
         Cache::put("preregistration-email-code-{$this->email}", $code, 15 * 60);
         Mail::to($this->email)->send(new PreRegistrationEmail($code));
         RateLimiter::hit('resend-code:' . $this->email, 60);
-        session()->flash('auth-flow', true);
         session()->flash('email', $this->email);
         $this->redirect(route('preregistration-notice'), navigate: true);
     }
