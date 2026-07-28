@@ -7,7 +7,9 @@ use Livewire\Attributes\Validate;
 use App\Models\User;
 use App\Models\Store;
 use App\Models\Social;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use App\Mail\StoreRegistrationEmail;
 
 new class extends Component
@@ -107,42 +109,37 @@ new class extends Component
 
     public function save(){
         $this->validate($this->rules());
-        $password = Str::random(8);
-        $userData = User::create([
-            'name' => $this->name,
-            'email' => $this->email,
-            'password' => $password,
-            'role' => 'store'
-        ]);
 
-        $storeData = Store::create([
-            'user_id' => $userData->id,
-            'name' => $this->store_name,
-            'phone_number' => $this->phone_number,
-            'logo' => $this->logo,
-            'description' => $this->description
-        ]);
+        return DB::transaction(function () {
+            $password = Str::random(8);
+            $userData = User::create([
+                'name' => $this->name,
+                'email' => $this->email,
+                'password' => $password,
+                'role' => 'store'
+            ]);
 
-        $socials = new Social();
-        if(count($this->social_media) == 1){
-            $socials->store_id = $storeData->id;
-            $socials->platform = $this->social_media['platform'];
-            $socials->user_name = $this->social_media['user_name'];
-            $socials->save();
-        }
-        else {
-            foreach($this->social_media as $index => $social){
-                $socials->store_id = $storeData->id;
-                $socials->platform = $social['platform'];
-                $socials->user_name = $social['user_name'];
-                $socials->save();
+            $path = $this->logo->store('logos','public');
+            $storeData = Store::create([
+                'user_id' => $userData->id,
+                'name' => $this->store_name,
+                'phone_number' => $this->phone_number,
+                'logo' => $path,
+                'description' => $this->description
+            ]);
+
+            foreach ($this->social_media as $social) {
+                $socialEntry = new Social();
+                $socialEntry->store_id = $storeData->id;
+                $socialEntry->platform = $social['platform'];
+                $socialEntry->user_name = $social['user_name'];
+                $socialEntry->save();
             }
-        }
 
-        Mail::to($this->email)->send(new StoreRegistrationEmail($password, $this->name, $this->store_name));
-        session()->flash('store-registration-successful','Store registered successfully');
-        return $this->redirect(route('stores'), navigate:true);
-
+            Mail::to($this->email)->send(new StoreRegistrationEmail($password, $this->name, $this->store_name));
+            session()->flash('store-registration-success','Store registered successfully');
+            return $this->redirect(route('stores'), navigate:true);
+        });
     }
     
 };
@@ -177,7 +174,7 @@ new class extends Component
 
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Contact Email</label>
-                            <input type="email" placeholder="owner@example.com" required wire:model.live.debounce.500ms="email">
+                            <input type="email" placeholder="owner@example.com" required wire:model.live.debounce.500ms="email" inputmode="email">
                             @error('email')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
@@ -185,7 +182,7 @@ new class extends Component
 
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Phone Number</label>
-                            <input type="text" placeholder="+234 800 000 0000" wire:model.live.debounce.500ms="phone_number">
+                            <input type="text" placeholder="08012345678" wire:model.live.debounce.500ms="phone_number" maxlength="11" inputmode="numeric">
                             @error('phone_number')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror

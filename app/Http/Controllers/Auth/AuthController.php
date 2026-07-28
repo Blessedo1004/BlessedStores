@@ -22,11 +22,15 @@ class AuthController extends Controller
 
     //sign in
     public function signIn(Request  $request){
-      $credentials =  $request->validate([
+      $request->validate([
           'email' => 'required|email',
           'password' => 'required|string',
       ]);
-
+      $lowerCaseEmail = strtolower($request->input('email'));
+      $credentials = [
+          'email' => $lowerCaseEmail,
+          'password' => $request->input('password'),
+        ];
       if (Auth::attempt($credentials)) {
           $request->session()->regenerate();
           return redirect()->intended(route('dashboard'))->with('loginSuccess', 'Login Successful');

@@ -2,15 +2,30 @@
 
 use Livewire\Component;
 use Livewire\Attributes\Title;
+use App\Models\Store;
 
 new class extends Component
 {
      #[Title('Stores')]
+
+     public function with() {
+        $stores = Store::select(['name', 'phone_number', 'logo', 'description'])->get();
+        return compact('stores');
+     }
 }
 ?>
 
 <div>
     <div class="dashboard-content">
+        @if(session('store-registration-success'))
+            <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{{session('store-registration-success')}}</span>
+            </div>
+            
+        @endif
 
         <div class="row d-flex align-items-center justify-content-between mb-4">
             <div class="col-12 col-lg-4 text-center text-lg-start">
@@ -41,7 +56,7 @@ new class extends Component
         <div class="custom-table-container">
             <div class="p-4 bg-white border-bottom d-flex align-items-center justify-content-between">
                 <h4 class="fw-bold text-dark mb-0 h5">Stores</h4>
-                <span class="text-muted small">Total: 0</span>
+                <span class="text-muted small">Total: {{ $stores->count()}}</span>
             </div>
 
             <div class="table-responsive">
@@ -51,30 +66,29 @@ new class extends Component
                             <th>Name</th>
                             <th>Phone Number</th>
                             <th>Logo</th>
-                            <th>Social Media 1</th>
-                            <th>Social Media 2</th>
-                            <th>Social Media 3</th>
-                            <th></th>
+                            <th>Description</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td class="fw-semibold text-dark">Sample Store</td>
-                            <td>+234 800 000 0000</td>
-                            <td><img src="/imgs/app/placeholder.png" alt="logo" class="rounded" style="height:40px; width:auto;"></td>
-                            <td><a href="#" class="text-color-1 text-decoration-none">Instagram</a></td>
-                            <td><a href="#" class="text-color-1 text-decoration-none">Facebook</a></td>
-                            <td><a href="#" class="text-color-1 text-decoration-none">Twitter</a></td>
-                            <td class="text-end">
-                                <a href="#" class="btn btn-outline-secondary btn-sm rounded-pill">Edit</a>
-                                <a href="#" class="btn btn-outline-danger btn-sm rounded-pill ms-2">Delete</a>
-                            </td>
-                        </tr>
+                        @forelse ($stores as $store)
+                            <tr>
+                            <td class="fw-semibold text-dark">{{ $store->name }}</td>
+                                <td>{{ $store->phone_number }}</td>
+                                <td><img src="{{ asset('storage/' . $store->logo) }}" alt="logo" class="rounded" style="height:40px; width:auto;"></td>
+                                <td>{{ $store->description }}</td>
+                                <td>
+                                    <button class="btn btn-outline-secondary btn-sm rounded-pill">Edit</button>
+                                    <button class="btn btn-outline-danger btn-sm rounded-pill ms-2">Delete</button>
+                                </td>
+                            </tr>  
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-muted text-center py-4">No more stores found.</td>
+                            </tr>     
+                        @endforelse
 
-                        <!-- Placeholder / empty state rows to roughly match 6 rows layout -->
-                        <tr>
-                            <td colspan="7" class="text-muted text-center py-4">No more stores found.</td>
-                        </tr>
+
                     </tbody>
                 </table>
             </div>
