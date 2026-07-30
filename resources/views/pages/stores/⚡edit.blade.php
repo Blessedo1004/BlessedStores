@@ -323,8 +323,8 @@ new class extends Component
                                             </span>
 
                                             <span class="fill-btn-inner" wire:loading wire:target="save">
-                                                <span class="fill-btn-normal">Update Store Details</span>
-                                                <span class="fill-btn-hover">Update Store Details</span>
+                                                <span class="fill-btn-normal">Updating</span>
+                                                <span class="fill-btn-hover">Updating</span>
                                             </span>
                                     </button>
                                 </div>
