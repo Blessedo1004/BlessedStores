@@ -287,9 +287,14 @@ new class extends Component
                             <div class="row">
                                 <div class="col-12 col-sm-6">
                                     <button type="submit" class="fill-btn border-0">                        
-                                            <span class="fill-btn-inner">
+                                            <span class="fill-btn-inner" wire:loading.remove wire:target="save">
                                                 <span class="fill-btn-normal">Add Store</span>
                                                 <span class="fill-btn-hover">Add Store</span>
+                                            </span>
+
+                                            <span class="fill-btn-inner" wire:loading wire:target="save">
+                                                <span class="fill-btn-normal">Adding</span>
+                                                <span class="fill-btn-hover">Adding</span>
                                             </span>
                                     </button>
                                 </div>

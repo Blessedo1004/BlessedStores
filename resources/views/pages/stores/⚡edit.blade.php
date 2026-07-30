@@ -154,7 +154,7 @@ new class extends Component
             if($this->email){
                $this->store->user->email = $this->email;
             }
-            
+
             $this->store->user->save();
 
             if($this->store_name){
@@ -316,8 +316,13 @@ new class extends Component
                         <div class="col-12 col-sm-7 text-center mt-4">
                             <div class="row">
                                 <div class="col-12 col-sm-6">
-                                    <button type="submit" class="fill-btn border-0">                        
-                                            <span class="fill-btn-inner">
+                                    <button type="submit" class="fill-btn border-0" wire:loading.attr="disabled">                        
+                                            <span class="fill-btn-inner" wire:loading.remove wire:target="save">
+                                                <span class="fill-btn-normal">Update Store Details</span>
+                                                <span class="fill-btn-hover">Update Store Details</span>
+                                            </span>
+
+                                            <span class="fill-btn-inner" wire:loading wire:target="save">
                                                 <span class="fill-btn-normal">Update Store Details</span>
                                                 <span class="fill-btn-hover">Update Store Details</span>
                                             </span>
