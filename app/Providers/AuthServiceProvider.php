@@ -30,6 +30,10 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('super-admin', function (User $user) {
             return $user->role === 'super-admin';
         });
+
+        Gate::define('admin-or-super-admin', function (User $user) {
+            return in_array($user->role, ['admin', 'super-admin']);
+        });
     }
 }
 

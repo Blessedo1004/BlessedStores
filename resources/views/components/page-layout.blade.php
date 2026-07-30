@@ -104,18 +104,24 @@
                </div>
                <div class="mobile-menu fix mb-40"></div>
                <div class="banner-btn-wrapper furniture__btn-group d-flex d-xxl-none">
-                  <a class="solid-btn" href="{{ route('signUp') }}">
-                     Sign Up
-                     <span>
-                        <i class="fa-regular fa-angle-right"></i>
-                     </span>
-                  </a>
-                  <a class="border__btn-banner" href="{{ route('login') }}">
-                     Sign In
-                     <span>
-                        <i class="fa-regular fa-angle-right"></i>
-                     </span>
-                  </a>
+                  @auth
+                     <a class="solid-btn" href="{{ route('dashboard') }}">
+                        Dashboard
+                     </a> 
+                     @else
+                     <a class="solid-btn" href="{{ route('signUp') }}">
+                        Sign Up
+                        <span>
+                           <i class="fa-regular fa-angle-right"></i>
+                        </span>
+                     </a>
+                     <a class="border__btn-banner" href="{{ route('login') }}">
+                        Sign In
+                        <span>
+                           <i class="fa-regular fa-angle-right"></i>
+                        </span>
+                     </a>
+                   @endauth
                </div>
                <div class="offcanvas__contact mt-30 mb-20">
                   <h4>Contact Info</h4>
@@ -358,7 +364,10 @@
                               <a class="furniture-clr-hover" href="cart.html">Cart</a>
                            </li>
                            <li>
-                              <a class="furniture-clr-hover" href="#">Logout</a>
+                              @auth
+                                 <livewire:logout/> 
+                              @endauth
+                              
                            </li>
                         </ul>
                      </div>
@@ -464,18 +473,24 @@
                            </div>
                         </div>
                         <div class="banner-btn-wrapper furniture__btn-group d-none d-xxl-flex ms-auto">
-                           <a class="solid-btn" href="{{ route('signUp') }}">
-                              Sign Up
-                              <span>
-                                 <i class="fa-regular fa-angle-right"></i>
-                              </span>
-                           </a>
-                           <a class="border__btn-banner" href="{{ route('login') }}">
-                              Sign In
-                              <span>
-                                 <i class="fa-regular fa-angle-right"></i>
-                              </span>
-                           </a>
+                           @auth
+                              <a class="solid-btn" href="{{ route('dashboard') }}">
+                                 Dashboard
+                              </a> 
+                              @else
+                              <a class="solid-btn" href="{{ route('signUp') }}">
+                                 Sign Up
+                                 <span>
+                                    <i class="fa-regular fa-angle-right"></i>
+                                 </span>
+                              </a>
+                              <a class="border__btn-banner" href="{{ route('login') }}">
+                                 Sign In
+                                 <span>
+                                    <i class="fa-regular fa-angle-right"></i>
+                                 </span>
+                              </a>
+                              @endauth
                         </div>
                      </div>
                   </div>

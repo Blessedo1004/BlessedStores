@@ -119,7 +119,7 @@
                     @endcan
 
                     @if (Gate::allows('super-admin') || Gate::allows('admin'))
-                          <a class="nav-link" href="{{ route('stores') }}" wire:navigate>
+                          <a class="nav-link {{ request()->routeIs('stores') || request()->routeIs('stores.add') ? 'active' : ''}}" href="{{ route('stores') }}" wire:navigate>
                               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                   <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21V16.5h-3V21m-6.213-9.103V18.75a.75.75 0 0 0 .75.75h14.25a.75.75 0 0 0 .75-.75v-6.853m-15.75 0a.75.75 0 0 1 .462-.692l7.5-3a.75.75 0 0 1 .576 0l7.5 3a.75.75 0 0 1 .462.692M3.75 12h16.5" />
                               </svg>

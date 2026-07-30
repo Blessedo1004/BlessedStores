@@ -9,7 +9,8 @@ new class extends Component
      #[Title('Stores')]
 
      public function with() {
-        $stores = Store::select(['name', 'phone_number', 'logo', 'description'])->get();
+        $stores = Store::with('user:id,name,email','socials:platform,user_name')->
+        select(['id','user_id','name', 'phone_number', 'logo', 'description','address','status'])->get();
         return compact('stores');
      }
 }
@@ -27,9 +28,19 @@ new class extends Component
             
         @endif
 
+        @if(session('store-update-success'))
+            <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{{session('store-update-success')}}</span>
+            </div>
+            
+        @endif
+
         <div class="row d-flex align-items-center justify-content-between mb-4">
             <div class="col-12 col-lg-4 text-center text-lg-start">
-                <h4 class="fw-bold text-dark mb-1 h5">Stores</h4>
+                <h5 class="fw-bold text-dark mb-1">Stores</h5>
                 <p class="text-muted small mb-0">Manage merchant stores — add, search, and view store data.</p>
             </div>
 
@@ -55,7 +66,7 @@ new class extends Component
 
         <div class="custom-table-container">
             <div class="p-4 bg-white border-bottom d-flex align-items-center justify-content-between">
-                <h4 class="fw-bold text-dark mb-0 h5">Stores</h4>
+                <h6 class="fw-bold text-dark mb-0">Stores</h6>
                 <span class="text-muted small">Total: {{ $stores->count()}}</span>
             </div>
 
@@ -67,6 +78,8 @@ new class extends Component
                             <th>Phone Number</th>
                             <th>Logo</th>
                             <th>Description</th>
+                            <th>Address</th>
+                            <th>Status</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -77,14 +90,20 @@ new class extends Component
                                 <td>{{ $store->phone_number }}</td>
                                 <td><img src="{{ asset('storage/' . $store->logo) }}" alt="logo" class="rounded" style="height:40px; width:auto;"></td>
                                 <td>{{ $store->description }}</td>
+                                <td>{{ $store->address }}</td>
                                 <td>
-                                    <button class="btn btn-outline-secondary btn-sm rounded-pill">Edit</button>
-                                    <button class="btn btn-outline-danger btn-sm rounded-pill ms-2">Delete</button>
+                                    <span class="status-badge {{ $store->status === 'active' ? 'bg-success' : 'bg-danger'}}">
+                                        {{ $store->status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ route('stores.edit', $store) }}" class="btn btn-outline-secondary btn-md rounded-pill" wire:navigate>Edit</a>
+                                    <button class="btn btn-outline-danger btn-md rounded-pill ms-2">Delete</button>
                                 </td>
                             </tr>  
                         @empty
                             <tr>
-                                <td colspan="7" class="text-muted text-center py-4">No more stores found.</td>
+                                <td colspan="7" class="text-muted text-center py-4">No stores found.</td>
                             </tr>     
                         @endforelse
 

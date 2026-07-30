@@ -22,8 +22,9 @@ Route::middleware('cache.headers:no_store,private')->controller(AuthController::
 
 Route::group(['middleware' => ['auth', 'cache.headers:no_store,private']], function () {
    Route::livewire('/dashboard', '⚡dashboard')->name('dashboard');
-   Route::livewire('/stores', 'stores/⚡index')->name('stores');
-   Route::livewire('/stores/add', 'stores/⚡create')->name('stores.add');
+   Route::livewire('/stores', 'stores/⚡index')->name('stores')->middleware(['can:admin-or-super-admin']);
+   Route::livewire('/stores/add', 'stores/⚡create')->name('stores.add')->middleware(['can:admin-or-super-admin']);
+   Route::livewire('/stores/edit/{id}', 'stores/⚡edit')->name('stores.edit')->middleware(['can:admin-or-super-admin']); 
 });
 
 Route::get('/payment', [PaymentController::class, 'showForm'])->name('payment.form');

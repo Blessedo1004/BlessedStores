@@ -15,18 +15,42 @@ use App\Mail\StoreRegistrationEmail;
 new class extends Component
 {
     use WithFileUploads;
-    #[Title('Add a Store')]
+    #[Title('Edit Store')]
 
-    public string $name = ' ';
-    public string $email = ' ';
-    public string $store_name = ' ';
-    public string $phone_number = ' ';
+    public Store $store;
+    public string $name ;
+    public string $email = '';
+    public string $store_name = '';
+    public string $phone_number ;
     public $logo;
-    public string $description = ' ';
-    public string $address = ' ';
-    public string $platform = ' ';
-    public string $user_name = ' ';
-    public array $social_media = [];
+    public $newLogo;
+    public string $description ;
+    public string $address ;
+    public string $platform ;
+    public string $user_name ;
+    public array $social_media;
+
+
+    public function mount($id){
+        // if(!$id){
+        //     return
+        // }
+
+        $store = Store::with('user','socials')->findOrFail($id);
+        $this->store = $store;
+        $this->name = $store->user->name;
+        $this->phone_number = $store->phone_number;
+        $this->logo = $store->logo;
+        $this->description = $store->description;
+        $this->address = $store->address;
+        $socials = $store->socials;
+        foreach ($socials as $social) {
+            $this->social_media[] = [
+                'platform' => $social->platform,
+                'user_name' => $social->user_name,
+        ];
+        }
+    }
 
     public function updated($property)
     {
@@ -45,12 +69,12 @@ new class extends Component
             ],
 
             'email' => [
-                'required',
+                'nullable',
                 'email',
                 'unique:users,email',
             ],
             'store_name' => [
-                'required',
+                'nullable',
                 'string',
                 'min:3',
                 'max:30',
@@ -62,8 +86,8 @@ new class extends Component
                 'string',
                 'size:11',
             ],
-             'logo' => [
-                'required',
+             'newLogo' => [
+                'nullable',
                 'image',
                 'max:2048'
             ],
@@ -126,34 +150,34 @@ new class extends Component
         $this->validate($this->rules());
 
         return DB::transaction(function () {
-            $password = Str::random(8);
-            $userData = User::create([
-                'name' => $this->name,
-                'email' => $this->email,
-                'password' => $password,
-                'role' => 'store'
-            ]);
+            $this->store->user->name = $this->name;
+            if($this->email){
+               $this->store->user->email = $this->email;
+            }
+            
+            $this->store->user->save();
 
-            $path = $this->logo->store('logos','public');
-            $storeData = Store::create([
-                'user_id' => $userData->id,
-                'name' => $this->store_name,
-                'phone_number' => $this->phone_number,
-                'logo' => $path,
-                'description' => $this->description,
-                'address' => $this->address,
-            ]);
-
-            foreach ($this->social_media as $social) {
-                $socialEntry = new Social();
-                $socialEntry->store_id = $storeData->id;
-                $socialEntry->platform = $social['platform'];
-                $socialEntry->user_name = $social['user_name'];
-                $socialEntry->save();
+            if($this->store_name){
+               $this->store->name = $this->store_name;
+            }
+            
+            if($this->newLogo){
+                $path = $this->newLogo->store('logos','public');
+                $this->store->logo = $path;
             }
 
-            Mail::to($this->email)->send(new StoreRegistrationEmail($password, $this->name, $this->store_name));
-            session()->flash('store-registration-success','Store registered successfully');
+            $this->store->phone_number = $this->phone_number;
+
+            $this->store->description = $this->description;
+
+            $this->store->address = $this->address;
+
+            $this->store->socials()->delete();
+
+            $this->store->socials()->createMany($this->social_media);
+
+            $this->store->save();
+            session()->flash('store-update-success','Store updated successfully');
             return $this->redirect(route('stores'), navigate:true);
         });
     }
@@ -162,8 +186,7 @@ new class extends Component
 ?>
 <div class="dashboard-content">
         <div class="mb-4">
-            <h5 class="fw-bold text-dark mb-1">Add New Store</h5>
-            <p class="text-muted small mb-0">Provide store details to create a new merchant store.</p>
+            <h5 class="fw-bold text-dark mb-1">Update Store Information</h5>
         </div>
 
         <div class="card border-0 shadow-sm rounded-4">
@@ -182,7 +205,7 @@ new class extends Component
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Store Name</label>
-                            <input type="text" placeholder="My Awesome Store" required wire:model.live.debounce.500ms="store_name">
+                            <input type="text" placeholder="Leave blank if you want it unchanged" wire:model.live.debounce.500ms="store_name">
                             @error('store_name')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
@@ -190,7 +213,7 @@ new class extends Component
 
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Contact Email</label>
-                            <input type="email" placeholder="owner@example.com" required wire:model.live.debounce.500ms="email" inputmode="email">
+                            <input type="email" placeholder="Leave blank if you want it unchanged" wire:model.live.debounce.500ms="email" inputmode="email">
                             @error('email')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
@@ -206,24 +229,31 @@ new class extends Component
 
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Logo</label>
-                            <input type="file" wire:model="logo" accept="image/*" required>
-                            @error('logo')
+                            <input type="file" wire:model="newLogo" accept="image/*">
+                            @error('newLogo')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
-                            @if($logo)
+                            @if($logo && !$newLogo)
                                 <div class="mt-2">
-                                    <img src="{{ $logo->temporaryUrl() }}" alt="Logo Preview" class="rounded" style="height: 80px; max-width: 100%;">
+                                    <img src="{{ asset('storage/' . $logo) }}" alt="Logo Preview" class="rounded" style="height: 80px; max-width: 100%;">
                                 </div>
+
+                                @else
+
+                                <div class="mt-2">
+                                    <img src="{{ $newLogo->temporaryUrl() }}" alt="Logo Preview" class="rounded" style="height: 80px; max-width: 100%;">
+                                </div>
+
                             @endif
 
-                            <div class="mt-2" wire:loading wire:target="logo">
+                            <div class="mt-2" wire:loading wire:target="newLogo">
                                     Uploading...
                             </div>
                         </div>
 
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Description</label>
-                            <textarea rows="3" placeholder="Short description about the store" wire:model.live.debounce.500ms="description"></textarea>
+                            <textarea rows="3" placeholder="Short description about the store" wire:model.live.debounce.500ms="description" required></textarea>
                             @error('description')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
@@ -277,7 +307,7 @@ new class extends Component
 
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Address</label>
-                            <textarea rows="3" placeholder="Store address" wire:model.live.debounce.500ms="address"></textarea>
+                            <textarea rows="3" placeholder="Store address" wire:model.live.debounce.500ms="address" required></textarea>
                             @error('address')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
@@ -288,8 +318,8 @@ new class extends Component
                                 <div class="col-12 col-sm-6">
                                     <button type="submit" class="fill-btn border-0">                        
                                             <span class="fill-btn-inner">
-                                                <span class="fill-btn-normal">Add Store</span>
-                                                <span class="fill-btn-hover">Add Store</span>
+                                                <span class="fill-btn-normal">Update Store Details</span>
+                                                <span class="fill-btn-hover">Update Store Details</span>
                                             </span>
                                     </button>
                                 </div>

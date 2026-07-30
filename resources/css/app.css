@@ -18,7 +18,7 @@ a{
     cursor: pointer;
 }
 
-input {
+input, textarea {
     display: block;
     width: 100%;
     padding: 12px 14px;
@@ -30,7 +30,7 @@ input {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-input:focus {
+input:focus, textarea:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 4px rgba(177, 139, 94, 0.08);
@@ -83,7 +83,7 @@ textarea{
     display: flex;
     align-items: center;
     gap: 12px;
-    font-size: 0.95rem;
+    font-size: 1.25rem;
     font-weight: 500;
     transition: all 0.2s ease;
 }
@@ -387,6 +387,12 @@ select:focus {
 
 .social-badge .remove-btn:hover {
     background: rgba(220,53,69,0.08);
+}
+
+.status-badge{
+    border-radius: 10px;
+    padding: 8px 10px;
+    color:white;
 }
 
 /* Chart card placeholders */
