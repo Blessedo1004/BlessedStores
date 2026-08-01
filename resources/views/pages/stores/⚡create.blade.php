@@ -61,6 +61,7 @@ new class extends Component
                 'required',
                 'string',
                 'size:11',
+                'regex:/^0[0-9]{10}$/'
             ],
              'logo' => [
                 'required',
@@ -124,6 +125,14 @@ new class extends Component
 
     public function save(){
         $this->validate($this->rules());
+
+        if(!Auth::check()){
+            $this->redirect(route('login'));
+        }
+
+        else if (!auth()->user()->can('admin-or-super-admin')) {
+            abort(403);
+        }
 
         return DB::transaction(function () {
             $password = Str::random(8);
@@ -198,7 +207,7 @@ new class extends Component
 
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Phone Number</label>
-                            <input type="text" placeholder="08012345678" wire:model.live.debounce.500ms="phone_number" maxlength="11" inputmode="numeric">
+                            <input type="tel" placeholder="08012345678" wire:model.live.debounce.500ms="phone_number" minlength="11" maxlength="11" inputmode="numeric">
                             @error('phone_number')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror

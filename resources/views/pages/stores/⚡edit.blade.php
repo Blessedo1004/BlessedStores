@@ -4,6 +4,7 @@ use Livewire\Component;
 use Livewire\Attributes\Title;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Validate;
+use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Store;
 use App\Models\Social;
@@ -29,20 +30,22 @@ new class extends Component
     public string $platform ;
     public string $user_name ;
     public array $social_media;
+    public string $status = 'active';
 
 
-    public function mount($id){
+    public function mount($slug){
         // if(!$id){
         //     return
         // }
 
-        $store = Store::with('user','socials')->findOrFail($id);
+        $store = Store::with('user','socials')->where('slug', $slug)->firstOrFail();
         $this->store = $store;
         $this->name = $store->user->name;
         $this->phone_number = $store->phone_number;
         $this->logo = $store->logo;
         $this->description = $store->description;
         $this->address = $store->address;
+        $this->status = $store->status;
         $socials = $store->socials;
         foreach ($socials as $social) {
             $this->social_media[] = [
@@ -77,7 +80,7 @@ new class extends Component
                 'nullable',
                 'string',
                 'min:3',
-                'max:30',
+                'max:40',
                 'unique:stores,name',
                 'regex:/^[^<>]*$/',
             ],
@@ -85,6 +88,7 @@ new class extends Component
                 'required',
                 'string',
                 'size:11',
+                'regex:/^0[0-9]{10}$/'
             ],
              'newLogo' => [
                 'nullable',
@@ -104,6 +108,10 @@ new class extends Component
                 'min:10',
                 'max:100',
                 'regex:/^[^<>]*$/',
+            ],
+            'status' => [
+                'required',
+                'in:active,suspended',
             ],
             'social_media' => [
                 'required',
@@ -147,21 +155,30 @@ new class extends Component
     }
 
     public function save(){
+        if(!Auth::check()){
+            $this->redirect(route('login'));
+        }
+
+        // Authorization check
+        else if (!auth()->user()->can('admin-or-super-admin') && $this->store->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         $this->validate($this->rules());
 
         return DB::transaction(function () {
             $this->store->user->name = $this->name;
-            if($this->email){
+            if(filled($this->email)){
                $this->store->user->email = $this->email;
             }
 
             $this->store->user->save();
 
-            if($this->store_name){
+            if(filled($this->store_name)){
                $this->store->name = $this->store_name;
             }
             
-            if($this->newLogo){
+            if(filled($this->newLogo)){
                 $path = $this->newLogo->store('logos','public');
                 $this->store->logo = $path;
             }
@@ -171,6 +188,7 @@ new class extends Component
             $this->store->description = $this->description;
 
             $this->store->address = $this->address;
+            $this->store->status = $this->status;
 
             $this->store->socials()->delete();
 
@@ -221,7 +239,7 @@ new class extends Component
 
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Phone Number</label>
-                            <input type="text" placeholder="08012345678" wire:model.live.debounce.500ms="phone_number" maxlength="11" inputmode="numeric">
+                            <input type="tel" placeholder="08012345678" wire:model.live.debounce.500ms="phone_number" minlength="11" maxlength="11" inputmode="numeric">
                             @error('phone_number')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
@@ -312,6 +330,26 @@ new class extends Component
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
                         </div>
+
+                    @can('admin-or-super-admin')
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold text-dark small mb-2">Status</label>
+                            <div class="d-flex gap-3 align-items-center">
+                                <label class="d-flex align-items-center gap-2">
+                                    <input type="radio" wire:model="status" value="active">
+                                    Active
+                                </label>
+                                <label class="d-flex align-items-center gap-2">
+                                    <input type="radio" wire:model="status" value="suspended">
+                                    Suspended
+                                </label>
+                            </div>
+                            @error('status')
+                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                            @enderror
+                        </div>    
+                    @endcan
+
 
                         <div class="col-12 col-sm-7 text-center mt-4">
                             <div class="row">

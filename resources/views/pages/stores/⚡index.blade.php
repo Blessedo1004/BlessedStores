@@ -3,16 +3,35 @@
 use Livewire\Component;
 use Livewire\Attributes\Title;
 use App\Models\Store;
+use Livewire\WithPagination;
 
 new class extends Component
 {
+    use WithPagination;
      #[Title('Stores')]
+     public string $status = '';
+     public string $searchTerm = '';
+
 
      public function with() {
-        $stores = Store::with('user:id,name,email','socials:platform,user_name')->
-        select(['id','user_id','name', 'phone_number', 'logo', 'description','address','status'])->get();
+        $stores = Store::with('user:id,name,email','socials:id,store_id,platform,user_name')->
+        select(['id','user_id','name', 'phone_number', 'logo', 'description','address','status', 'slug', 'created_at'])
+        ->when($this->status , function($query){
+            $query->where('status' , $this->status);
+        })
+        ->when($this->searchTerm , function($query){
+            $query->where('slug', 'like', '%'.trim($this->searchTerm).'%')
+            ->orWhere('name', 'like', '%'.trim($this->searchTerm).'%')
+            ->orWhere('address', 'like', '%'.trim($this->searchTerm).'%');
+        })
+        ->latest()->paginate(10)->onEachSide(0);
         return compact('stores');
      }
+
+    public function updatedStatus()
+    {
+        $this->resetPage();
+    }
 }
 ?>
 
@@ -47,7 +66,7 @@ new class extends Component
             <div class="col-12 col-lg-8">
                 <div class="row d-flex justify-content-md-center justify-content-lg-end">
                     <div class="col-12 col-md-4 mt-4 mt-lg-0">
-                        <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search stores by name" />
+                        <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search stores by name" wire:model.live.debounce.500ms="searchTerm" inputmode="search">
                     </div>
                     <div class="col-12 col-md-6 mt-4 mt-lg-0 text-center">
                         <a href="{{ route('stores.add') }}" class="fill-btn border-0" wire:navigate>
@@ -65,6 +84,14 @@ new class extends Component
         </div>
 
         <div class="custom-table-container">
+            <div class="p-4 bg-white border-bottom">
+                <label class="form-label fw-semibold text-dark small mb-2">Filter stores</label>
+                <select class="form-select" wire:model.live="status">
+                    <option value="">All stores</option>
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                </select>
+            </div>
             <div class="p-4 bg-white border-bottom d-flex align-items-center justify-content-between">
                 <h6 class="fw-bold text-dark mb-0">Stores</h6>
                 <span class="text-muted small">Total: {{ $stores->count()}}</span>
@@ -79,6 +106,7 @@ new class extends Component
                             <th>Logo</th>
                             <th>Description</th>
                             <th>Address</th>
+                            <th>Date of Registration</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
@@ -86,18 +114,21 @@ new class extends Component
                     <tbody>
                         @forelse ($stores as $store)
                             <tr>
-                            <td class="fw-semibold text-dark">{{ $store->name }}</td>
+                            <td class="fw-semibold text-dark">{{ Str::limit($store->name, 30) }}</td>
                                 <td>{{ $store->phone_number }}</td>
-                                <td><img src="{{ asset('storage/' . $store->logo) }}" alt="logo" class="rounded" style="height:40px; width:auto;"></td>
-                                <td>{{ $store->description }}</td>
-                                <td>{{ $store->address }}</td>
+                                <td>
+                                    <img src="{{ asset('storage/' . $store->logo) }}" alt="logo" class="rounded" style="height:40px; width:auto;">
+                                </td>
+                                <td>{{Str::limit($store->description, 30) }}</td>
+                                <td>{{ Str::limit($store->address, 40) }}</td>
+                                <td>{{ $store->created_at->format('M d,Y') }}</td>
                                 <td>
                                     <span class="status-badge {{ $store->status === 'active' ? 'bg-success' : 'bg-danger'}}">
                                         {{ $store->status }}
                                     </span>
                                 </td>
-                                <td>
-                                    <a href="{{ route('stores.edit', $store) }}" class="btn btn-outline-secondary btn-md rounded-pill" wire:navigate>Edit</a>
+                                <td class="d-flex">
+                                    <a href="{{ route('stores.edit', $store->slug) }}" class="btn btn-outline-secondary btn-md rounded-pill" wire:navigate>Edit</a>
                                     <button class="btn btn-outline-danger btn-md rounded-pill ms-2">Delete</button>
                                 </td>
                             </tr>  
