@@ -81,6 +81,22 @@ new class extends Component
 
     public function signup()
     {
+       // Rate limiting 
+       $key = 'signup:' . request()->ip();
+       
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+
+            $this->addError(
+                'create',
+                "You can only create five stores in 5 minutes. Please wait {$seconds} seconds before trying again."
+            );
+        return;
+       }
+
+        // Allow five requests every five minutes from each IP address.
+        RateLimiter::hit($key, 60 * 5);
+        
         $userData = $this->validate($this->rules(), $this->messages);
 
         $existingCode = Cache::get("preregistration-email-code-{$this->email}");

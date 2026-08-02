@@ -111,7 +111,7 @@ new class extends Component
         Cache::forget("preregistration-email-for-{$this->code}");
         Cache::forget("preregistration-email-code-{$this->email}");
         RateLimiter::clear($key);
-        session()->flash('signup-success', 'Account successfully created. You can now sign in');
+        session()->flash('success', 'Account successfully created. You can now sign in');
         $this->redirect(route('login'));
     }
 };

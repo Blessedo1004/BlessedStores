@@ -4,6 +4,7 @@ use Livewire\Component;
 use Livewire\Attributes\Title;
 use App\Models\Store;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\DB;
 
 new class extends Component
 {
@@ -39,12 +40,12 @@ new class extends Component
             abort(403);
         }
 
-        $store = Store::with('user','socials')->where('slug', $slug)->firstOrFail();
-
-        $store->user->delete();
-        $store->socials()->delete();
-        $store->delete();
-
+        return DB::transaction(function () {        
+            $store = Store::with('user','socials')->where('slug', $slug)->firstOrFail();
+            $store->user->delete();
+            $store->socials()->delete();
+            $store->delete();
+        });    
         session()->flash('success', 'Store deleted successfully!');
 
     }

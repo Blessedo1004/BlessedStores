@@ -103,7 +103,7 @@ new class extends Component
         $cachedToken = Cache::get("forgot-password-token-{$this->email}");
 
         if (!$cachedToken || $cachedToken !== $this->token) {
-            session()->flash('reset-password-failure', 'Reset password failed. Please try again.');
+            session()->flash('failure', 'Reset password failed. Please try again.');
             $this->redirect(route('login'));
         }
 
@@ -121,7 +121,7 @@ new class extends Component
         Cache::forget("forgot-password-token-{$this->email}");
         Cache::forget("forgot-password-email-{$this->token}");
         Mail::to($this->email)->send(new PasswordResetEmail());
-        session()->flash('reset-password-success', 'Your password has been reset successfully. You can now log in with your new password.');
+        session()->flash('success', 'Your password has been reset successfully. You can now log in with your new password.');
         $this->redirect(route('login'));
     }
 };
