@@ -17,15 +17,15 @@ new class extends Component
     use WithFileUploads;
     #[Title('Add a Store')]
 
-    public string $name = ' ';
-    public string $email = ' ';
-    public string $store_name = ' ';
-    public string $phone_number = ' ';
+    public string $name = '';
+    public string $email = '';
+    public string $store_name = '';
+    public string $phone_number = '';
     public $logo;
-    public string $description = ' ';
-    public string $address = ' ';
-    public string $platform = ' ';
-    public string $user_name = ' ';
+    public string $description = '';
+    public string $address = '';
+    public string $platform = '';
+    public string $user_name = '';
     public array $social_media = [];
 
     public function updated($property)
@@ -53,7 +53,7 @@ new class extends Component
                 'required',
                 'string',
                 'min:3',
-                'max:30',
+                'max:50',
                 'unique:stores,name',
                 'regex:/^[^<>]*$/',
             ],
@@ -124,15 +124,34 @@ new class extends Component
     }
 
     public function save(){
-        $this->validate($this->rules());
-
+        // Authentication check
         if(!Auth::check()){
             $this->redirect(route('login'));
         }
 
+        // Authorization check
         else if (!auth()->user()->can('admin-or-super-admin')) {
             abort(403);
         }
+
+       // Rate limiting 
+       $key = 'create-store:' . request()->ip();
+       
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+
+            $this->addError(
+                'create',
+                "You can only create five stores in 5 minutes. Please wait {$seconds} seconds before trying again."
+            );
+        return;
+       }
+
+        // Allow five requests every five minutes from each IP address.
+        RateLimiter::hit($key, 60 * 5);
+
+        // Validation
+        $this->validate($this->rules());
 
         return DB::transaction(function () {
             $password = Str::random(8);
@@ -162,7 +181,7 @@ new class extends Component
             }
 
             Mail::to($this->email)->send(new StoreRegistrationEmail($password, $this->name, $this->store_name));
-            session()->flash('store-registration-success','Store registered successfully');
+            session()->flash('success','Store registered successfully');
             return $this->redirect(route('stores'), navigate:true);
         });
     }
@@ -170,6 +189,24 @@ new class extends Component
 };
 ?>
 <div class="dashboard-content">
+        @php
+            $rateLimitErrors = collect($errors->messages())
+                ->except(['name', 'email', 'store_name', 'phone_number', 'logo', 'description', 'address', 'social_media'])
+                ->flatten();
+        @endphp 
+        
+         @if ($rateLimitErrors->isNotEmpty())
+            @foreach ($rateLimitErrors as $error)
+                <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center" role="alert">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <ul class="mb-0 ps-2 list-unstyled">
+                            <li>{{ $error }}</li>
+                    </ul>
+                </div>
+            @endforeach
+        @endif
         <div class="mb-4">
             <h5 class="fw-bold text-dark mb-1">Add New Store</h5>
             <p class="text-muted small mb-0">Provide store details to create a new merchant store.</p>
@@ -220,7 +257,7 @@ new class extends Component
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
                             @if($logo)
-                                <div class="mt-2">
+                                <div class="mt-2" wire:transition>
                                     <img src="{{ $logo->temporaryUrl() }}" alt="Logo Preview" class="rounded" style="height: 80px; max-width: 100%;">
                                 </div>
                             @endif
@@ -270,7 +307,7 @@ new class extends Component
                             <div class="col-12">
                                 <div id="social-badges" class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
                                     @foreach ($this->social_media as $social)
-                                        <div class="social-badge">
+                                        <div class="social-badge" wire:key="social-{{ $loop->index }}" wire:transition>
                                             <div class="platform">
                                                 <div class="platform-name">{{ $social['platform'] }}</div>
                                                 <div class="username">{{ $social['user_name'] }}</div>

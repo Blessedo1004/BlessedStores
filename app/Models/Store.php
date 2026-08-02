@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class Store extends Model
 {
-    protected $fillable = ['user_id', 'name', 'phone_number', 'logo', 'slug', 'description'];
+    protected $fillable = ['user_id', 'name', 'phone_number', 'logo', 'slug', 'description', 'address'];
     
     public function socials(){
         return $this->hasMany(Social::class);
@@ -19,13 +19,46 @@ class Store extends Model
     }
 
     //create slug
-        protected static function boot()
+    protected static function booted(): void
     {
-        parent::boot();
-        static::creating(function ($store) {
-            if (empty($store->slug)) {
-                $store->slug = Str::slug($store->name);
+        static::creating(function (Store $store) {
+            $store->slug = static::generateUniqueSlug($store->name);
+        });
+
+        static::updating(function (Store $store) {
+            if ($store->isDirty('name')) {
+                $store->slug = static::generateUniqueSlug(
+                    $store->name,
+                    $store->id
+                );
             }
         });
-    }    
+    }
+
+    protected static function generateUniqueSlug(
+        string $name,
+        ?int $ignoreId = null
+    ): string {
+        $baseSlug = Str::slug($name);
+
+        $slug = $baseSlug;
+
+        $count = 1;
+
+        while (
+            static::query()
+                ->where('slug', $slug)
+                ->when(
+                    $ignoreId,
+                    fn ($query) => $query->where('id', '!=', $ignoreId)
+                )
+                ->exists()
+        ) {
+            $slug = $baseSlug . '-' . $count;
+
+            $count++;
+        }
+
+        return $slug;
+    }  
 }

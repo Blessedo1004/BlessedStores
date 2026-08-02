@@ -34,10 +34,6 @@ new class extends Component
 
 
     public function mount($slug){
-        // if(!$id){
-        //     return
-        // }
-
         $store = Store::with('user','socials')->where('slug', $slug)->firstOrFail();
         $this->store = $store;
         $this->name = $store->user->name;
@@ -80,7 +76,7 @@ new class extends Component
                 'nullable',
                 'string',
                 'min:3',
-                'max:40',
+                'max:50',
                 'unique:stores,name',
                 'regex:/^[^<>]*$/',
             ],
@@ -155,6 +151,7 @@ new class extends Component
     }
 
     public function save(){
+        // Authentication check
         if(!Auth::check()){
             $this->redirect(route('login'));
         }
@@ -164,6 +161,23 @@ new class extends Component
             abort(403);
         }
 
+       // Rate limiting
+       $key = 'update-store:' . request()->ip();
+       
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+
+            $this->addError(
+                'update',
+                "You can only update five stores in 5 minutes. Please wait {$seconds} seconds before trying again."
+            );
+        return;
+       }
+
+        // Allow five requests every five minutes from each IP address.
+        RateLimiter::hit($key, 60 * 5);
+
+        // Validation
         $this->validate($this->rules());
 
         return DB::transaction(function () {
@@ -179,8 +193,8 @@ new class extends Component
             }
             
             if(filled($this->newLogo)){
-                $path = $this->newLogo->store('logos','public');
-                $this->store->logo = $path;
+                $newPath = $this->newLogo->store('logos','public');
+                $this->store->logo = $newPath;
             }
 
             $this->store->phone_number = $this->phone_number;
@@ -195,7 +209,7 @@ new class extends Component
             $this->store->socials()->createMany($this->social_media);
 
             $this->store->save();
-            session()->flash('store-update-success','Store updated successfully');
+            session()->flash('success','Store updated successfully');
             return $this->redirect(route('stores'), navigate:true);
         });
     }
@@ -203,6 +217,25 @@ new class extends Component
 };
 ?>
 <div class="dashboard-content">
+        @php
+            $rateLimitErrors = collect($errors->messages())
+                ->except(['name', 'email', 'store_name', 'phone_number', 'logo', 'newLogo', 'description', 'address', 'social_media'])
+                ->flatten();
+        @endphp 
+        
+         @if ($rateLimitErrors->isNotEmpty())
+            @foreach ($rateLimitErrors as $error)
+                <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center" role="alert">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <ul class="mb-0 ps-2 list-unstyled">
+                            <li>{{ $error }}</li>
+                    </ul>
+                </div>
+            @endforeach
+        @endif
+
         <div class="mb-4">
             <h5 class="fw-bold text-dark mb-1">Update Store Information</h5>
         </div>
@@ -258,7 +291,7 @@ new class extends Component
 
                                 @else
 
-                                <div class="mt-2">
+                                <div class="mt-2" wire:transition>
                                     <img src="{{ $newLogo->temporaryUrl() }}" alt="Logo Preview" class="rounded" style="height: 80px; max-width: 100%;">
                                 </div>
 
@@ -309,7 +342,7 @@ new class extends Component
                             <div class="col-12">
                                 <div id="social-badges" class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
                                     @foreach ($this->social_media as $social)
-                                        <div class="social-badge">
+                                        <div class="social-badge" wire:key="social-{{ $loop->index }}" wire:transition>
                                             <div class="platform">
                                                 <div class="platform-name">{{ $social['platform'] }}</div>
                                                 <div class="username">{{ $social['user_name'] }}</div>

@@ -28,7 +28,33 @@ new class extends Component
         return compact('stores');
      }
 
+    public function delete($slug){
+        // Authentication check
+        if(!Auth::check()){
+            $this->redirect(route('login'));
+        }
+
+        // Authorization check
+        else if (!auth()->user()->can('admin-or-super-admin')) {
+            abort(403);
+        }
+
+        $store = Store::with('user','socials')->where('slug', $slug)->firstOrFail();
+
+        $store->user->delete();
+        $store->socials()->delete();
+        $store->delete();
+
+        session()->flash('success', 'Store deleted successfully!');
+
+    }
+
     public function updatedStatus()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSearchTerm()
     {
         $this->resetPage();
     }
@@ -37,22 +63,12 @@ new class extends Component
 
 <div>
     <div class="dashboard-content">
-        @if(session('store-registration-success'))
+        @if(session('success'))
             <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <span>{{session('store-registration-success')}}</span>
-            </div>
-            
-        @endif
-
-        @if(session('store-update-success'))
-            <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>{{session('store-update-success')}}</span>
+                <span>{{session('success')}}</span>
             </div>
             
         @endif
@@ -113,24 +129,24 @@ new class extends Component
                     </thead>
                     <tbody>
                         @forelse ($stores as $store)
-                            <tr>
+                        <tr wire:key="store-{{ $store->id }}" wire:transition>
                             <td class="fw-semibold text-dark">{{ Str::limit($store->name, 30) }}</td>
-                                <td>{{ $store->phone_number }}</td>
-                                <td>
-                                    <img src="{{ asset('storage/' . $store->logo) }}" alt="logo" class="rounded" style="height:40px; width:auto;">
-                                </td>
-                                <td>{{Str::limit($store->description, 30) }}</td>
-                                <td>{{ Str::limit($store->address, 40) }}</td>
-                                <td>{{ $store->created_at->format('M d,Y') }}</td>
-                                <td>
-                                    <span class="status-badge {{ $store->status === 'active' ? 'bg-success' : 'bg-danger'}}">
-                                        {{ $store->status }}
-                                    </span>
-                                </td>
-                                <td class="d-flex">
-                                    <a href="{{ route('stores.edit', $store->slug) }}" class="btn btn-outline-secondary btn-md rounded-pill" wire:navigate>Edit</a>
-                                    <button class="btn btn-outline-danger btn-md rounded-pill ms-2">Delete</button>
-                                </td>
+                            <td>{{ $store->phone_number }}</td>
+                            <td>
+                                <img src="{{ asset('storage/' . $store->logo) }}" alt="logo" class="rounded" style="height:40px; width:auto;">
+                            </td>
+                            <td>{{Str::limit($store->description, 50) }}</td>
+                            <td>{{ Str::limit($store->address, 50) }}</td>
+                            <td>{{ $store->created_at->format('M d,Y') }}</td>
+                            <td>
+                                <span class="status-badge {{ $store->status === 'active' ? 'bg-success' : 'bg-danger'}}">
+                                    {{ $store->status }}
+                                </span>
+                            </td>
+                            <td class="d-flex">
+                                <a href="{{ route('stores.edit', $store->slug) }}" class="btn btn-outline-secondary btn-md rounded-pill" wire:navigate>Edit</a>
+                                <button class="btn btn-outline-danger btn-md rounded-pill ms-2" wire:click="delete(@js($store->slug))" wire:confirm="Are you sure you want to delete this store?? This is a permanent action.">Delete</button>
+                            </td>
                             </tr>  
                         @empty
                             <tr>
