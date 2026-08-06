@@ -312,7 +312,14 @@ new class extends Component
                                                 <div class="platform-name">{{ $social['platform'] }}</div>
                                                 <div class="username">{{ $social['user_name'] }}</div>
                                             </div>
-                                        <button type="button" class="remove-btn" aria-label="Remove" wire:click="removeSocialMedia({{ $loop->index }})" wire:loading.attr="disabled">&times;</button>
+                                        <button type="button" class="remove-btn" aria-label="Remove" wire:click="removeSocialMedia({{ $loop->index }})" wire:loading.attr="disabled">
+                                           <span wire:loading.remove wire:target="removeSocialMedia({{ $loop->index }})">
+                                                &times;
+                                           </span>
+                                           <span wire:loading wire:target="removeSocialMedia({{ $loop->index }})">
+                                                ...
+                                           </span>
+                                        </button>
                                     </div>
                                     @endforeach
                                 </div>

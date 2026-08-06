@@ -17,7 +17,7 @@ Route::livewire('/reset-password', 'auth.⚡reset-password')->name('reset-passwo
 
 Route::middleware('cache.headers:no_store,private')->controller(AuthController::class)->group(function(){
     Route::get('/login','showSignIn')->name('login');
-    Route::post('/login','signIn')->name('auth.signin');
+    Route::post('/login','signIn')->name('auth.signin')->middleware('throttle:auth');
 });
 
 Route::group(['middleware' => ['auth', 'cache.headers:no_store,private']], function () {
