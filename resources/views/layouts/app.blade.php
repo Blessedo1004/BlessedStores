@@ -128,7 +128,7 @@
                     @endif
 
                     @if (Gate::allows('super-admin') || Gate::allows('admin'))
-                          <a class="nav-link {{ request()->routeIs('store-applications') ? 'active' : ''}}" href="" wire:navigate>
+                          <a class="nav-link {{ request()->routeIs('store-applications') ? 'active' : ''}}" href="{{ route('store-applications') }}" wire:navigate>
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"> 
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 3.75h6A2.25 2.25 0 0 1 17.25 6v12A2.25 2.25 0 0 1 15 20.25H9A2.25 2.25 0 0 1 6.75 18V6A2.25 2.25 0 0 1 9 3.75ZM9 8.25h6M9 12h6M9 15.75h3" /> 
                             </svg>

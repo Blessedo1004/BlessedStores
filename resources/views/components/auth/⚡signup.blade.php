@@ -172,7 +172,7 @@ new class extends Component
                     <!-- Email Input -->
                     <div class="mb-3">
                         <label for="email" class="form-label fw-semibold text-dark small mb-2">Email Address</label>
-                        <input id="email" type="email" placeholder="name@example.com" class="@error('email') is-invalid @enderror" required autofocus wire:model.live.debounce.500ms="email">
+                        <input id="email" type="email" placeholder="name@example.com" class="@error('email') is-invalid @enderror" required wire:model.live.debounce.500ms="email">
                         @error('email')
                             <div class="invalid-feedback mt-1 ">{{ $message }}</div>
                         @enderror

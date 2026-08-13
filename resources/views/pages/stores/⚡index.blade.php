@@ -17,9 +17,8 @@ new class extends Component
 
 
      public function with() {
-        $stores = Store::with('user:id,name,email','socials:id,store_id,platform,user_name')->
-        select(['id','user_id','name', 'phone_number', 'logo', 'description','address','status', 'slug', 'created_at'])
-        ->when($this->status , function($query){
+        $stores = Store::with('user:id,name,email','socials') 
+            ->when($this->status , function($query){
             $query->where('status' , $this->status);
         })
         ->when($this->searchTerm , function($query){
@@ -168,9 +167,9 @@ new class extends Component
                             </td>
                             <td>
                                 <div class="d-flex flex-column flex-sm-row align-items-center gap-2">
-                                    <button class="btn btn-outline-info btn-sm rounded-pill" wire:click="showStoreInfo(@js($store->slug))">View Info</button>
+                                    <button class="btn btn-outline-info btn-sm rounded-pill" wire:click="showStoreInfo(@js($store->slug))" wire:loading.attr="disabled">View Info</button>
                                     <a href="{{ route('stores.edit', $store->slug) }}" class="btn btn-outline-secondary btn-sm rounded-pill" wire:navigate>Edit</a>
-                                    <button class="btn btn-outline-danger btn-sm rounded-pill" wire:click="delete(@js($store->slug))" wire:confirm="Are you sure you want to delete this store?? This is a permanent action.">Delete</button>
+                                    <button class="btn btn-outline-danger btn-sm rounded-pill" wire:click="delete(@js($store->slug))" wire:confirm="Are you sure you want to delete this store?? This is a permanent action." wire:loading.attr="disabled">Delete</button>
                                 </div>
                             </td>
                             </tr>  
@@ -193,7 +192,7 @@ new class extends Component
         <div class="store-info-panel">
             <div class="store-info-panel-header">
                 <h5 class="store-info-panel-title">Store Information</h5>
-                <button type="button" class="store-info-close" wire:click="$set('showInfo', false)">×</button>
+                <button type="button" class="store-info-close" wire:click="$set('showInfo', false)" wire:loading.attr="disabled">×</button>
             </div>
             <div class="store-info-panel-body">
                 <div class="store-info-card">

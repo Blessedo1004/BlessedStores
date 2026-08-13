@@ -216,7 +216,7 @@ new class extends Component
                     <!-- Owner Name -->
                     <div class="mb-3">
                         <label class="form-label fw-semibold text-dark small mb-2">Owner Name</label>
-                        <input type="text" placeholder="John Doe" required wire:model.live.debounce.500ms="owner_name">
+                        <input type="text" placeholder="John Doe" required wire:model.live.debounce.500ms="owner_name" autofocus>
                         @error('owner_name')
                             <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                         @enderror
