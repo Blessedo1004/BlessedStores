@@ -155,16 +155,16 @@ new class extends Component
 
         return DB::transaction(function () {
             $password = Str::random(8);
-            $userData = User::create([
-                'name' => $this->name,
-                'email' => $this->email,
-                'password' => $password,
-                'role' => 'store'
-            ]);
+            $user = new User();
+            $user->name = $this->name;
+            $user->email = $this->email;
+            $user->password = Hash::make($password);
+            $user->role = 'store';
+            $user->save();
 
             $path = $this->logo->store('logos','public');
             $storeData = Store::create([
-                'user_id' => $userData->id,
+                'user_id' => $user->id,
                 'name' => $this->store_name,
                 'phone_number' => $this->phone_number,
                 'logo' => $path,
@@ -181,7 +181,7 @@ new class extends Component
             }
 
             Mail::to($this->email)->send(new StoreRegistrationEmail($password, $this->name, $this->store_name));
-            session()->flash('success','Store registered successfully');
+            session()->flash('store-registration-success','Store registered successfully');
             return $this->redirect(route('stores'), navigate:true);
         });
     }

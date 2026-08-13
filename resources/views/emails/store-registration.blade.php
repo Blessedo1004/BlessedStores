@@ -30,7 +30,7 @@
       <div class="email-header">
         <img class="brand" src="{{ asset('imgs/logo/logo.png') }}" alt="logo">
         <div>
-          <div style="font-weight:700;color:#222">BlessedStore</div>
+          <div style="font-weight:700;color:#222">BlessedStores</div>
           <div style="font-size:12px;color:#8b8b8b">Store Registration</div>
         </div>
       </div>

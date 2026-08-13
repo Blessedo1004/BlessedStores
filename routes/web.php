@@ -9,8 +9,10 @@ Route::get('/', function () {
     return view('home');
 })->name('home');
 
-Route::livewire('/signup', 'auth.⚡signup')->name('signUp')->middleware('cache.headers:no_store,private');
+Route::livewire('/signup', 'auth.⚡signup')->name('signUp');
+Route::livewire('/register-store', 'auth.⚡register-store')->name('register-store');
 Route::livewire('/preregistration-notice', 'auth.⚡preregistration-notice')->name('preregistration-notice');
+Route::livewire('/store-preapplication-notice', 'auth.⚡store-preapplication-notice')->name('store-preapplication-notice');
 Route::livewire('/forgot-password', 'auth.⚡forgot-password')->name('forgot-password');
 Route::livewire('/forgot-password-verify', 'auth.⚡forgot-password-verify')->name('forgot-password-verify');
 Route::livewire('/reset-password', 'auth.⚡reset-password')->name('reset-password');
@@ -23,7 +25,6 @@ Route::middleware('cache.headers:no_store,private')->controller(AuthController::
 Route::group(['middleware' => ['auth', 'cache.headers:no_store,private']], function () {
    Route::livewire('/dashboard', '⚡dashboard')->name('dashboard');
    Route::livewire('/stores', 'stores/⚡index')->name('stores')->middleware(['can:admin-or-super-admin']);
-   Route::livewire('/stores/add', 'stores/⚡create')->name('stores.add')->middleware(['can:admin-or-super-admin']);
    Route::livewire('/stores/edit/{slug}', 'stores/⚡edit')->name('stores.edit')->middleware(['can:admin-or-super-admin']); 
 });
 

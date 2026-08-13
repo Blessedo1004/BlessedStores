@@ -2,20 +2,21 @@
 
 use Livewire\Component;
 use Livewire\Attributes\Validate;
-use App\Models\User;
+use App\Models\StoreApplication;
+use App\Models\ApplicationSocial;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\PreRegistrationEmail;
+use App\Mail\StorePreApplicationEmail;
+use App\Mail\StoreApplicationEmail;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Hash;
 
 new class extends Component
 {
     #[Layout('components.layouts.auth')] 
-    #[Title('Preregistration Notice')]
+    #[Title('Pre-application Notice')]
 
     #[Validate('required|email')]
     public $email;
@@ -29,10 +30,10 @@ new class extends Component
     {
         $this->email = session('email');
         if (!$this->email) {
-            return $this->redirect(route('signUp'), navigate:true);
+            return $this->redirect(route('register-store'), navigate:true);
         }
 
-        $key = 'resend-code:' . $this->email;
+        $key = 'resend-preapplication-code:' . $this->email;
 
         $this->countdown = RateLimiter::availableIn($key);
     }
@@ -40,7 +41,7 @@ new class extends Component
 
     public function resendCode()
     {
-        $key = 'resend-code:' . $this->email;
+        $key = 'resend-preapplication-code:' . $this->email;
 
         if (RateLimiter::tooManyAttempts($key, 1)) {
             $seconds = RateLimiter::availableIn($key);
@@ -57,20 +58,20 @@ new class extends Component
         // Allow only 1 resend every 60 seconds
         RateLimiter::hit($key, 60);
 
-        $oldCode = Cache::get("preregistration-email-code-{$this->email}");
-        $userData = Cache::get("preregistration-email-for-{$oldCode}");
+        $oldCode = Cache::get("preapplication-email-code-{$this->email}");
+        $userData = Cache::get("preapplication-email-for-{$oldCode}");
 
-        if ($oldCode && $userData) {
-            Cache::forget("preregistration-email-code-{$this->email}");
-            Cache::forget("preregistration-email-for-{$oldCode}");
+        if (!$userData) {
+            session()->flash('failure', 'Your previous verification code has expired. Please start the application process again.');
+            return $this->redirect(route('register-store'), navigate:true);
         }
 
         $newCode = Str::random(6);
 
-        Cache::put("preregistration-email-for-{$newCode}", $userData, 15 * 60);
-        Cache::put("preregistration-email-code-{$this->email}", $newCode, 15 * 60);
+        Cache::put("preapplication-email-for-{$newCode}", $userData, 15 * 60);
+        Cache::put("preapplication-email-code-{$this->email}", $newCode, 15 * 60);
 
-        Mail::to($this->email)->send(new PreRegistrationEmail($newCode));
+        Mail::to($this->email)->send(new StorePreApplicationEmail($newCode));
 
         $this->countdown = RateLimiter::availableIn($key);
         $this->dispatch('resend-countdown', seconds: $this->countdown);
@@ -96,23 +97,41 @@ new class extends Component
         // Allow five verification attempts every 60 seconds for each email.
         RateLimiter::hit($key, 60);
 
-        $userData = Cache::get("preregistration-email-for-{$this->code}");
+        $userData = Cache::get("preapplication-email-for-{$this->code}");
 
         if(!$userData || $userData['email'] !== $this->email){
             $this->addError('code', 'The verification code is invalid or has expired.');
             return;
         }
 
-        $user = new User();   
-        $user->name = $userData['name'];
-        $user->email = $userData['email'];
-        $user->password = Hash::make($userData['password']);
-        $user->save();
-        Cache::forget("preregistration-email-for-{$this->code}");
-        Cache::forget("preregistration-email-code-{$this->email}");
-        RateLimiter::clear($key);
-        session()->flash('success', 'Account successfully created. You can now sign in');
-        $this->redirect(route('login'));
+        return DB::transaction(function () use ($userData, $key) {
+            $storeApplicationData = StoreApplication::create([
+                'owner_name' => $userData['owner_name'],
+                'store_name' => $userData['store_name'],
+                'email' => $userData['email'],
+                'phone_number' => $userData['phone_number'],
+                'logo' => $userData['logo'],
+                'description' => $userData['description'],
+                'address' => $userData['address'],
+            ]);
+
+            foreach ($userData['social_media'] as $social) {
+                $socialEntry = new ApplicationSocial();
+                $socialEntry->store_application_id = $storeApplicationData->id;
+                $socialEntry->platform = $social['platform'];
+                $socialEntry->user_name = $social['user_name'];
+                $socialEntry->save();
+            }
+
+            $storeApplicationData->load('applicationSocials');
+            Cache::forget("preapplication-email-for-{$this->code}");
+            Cache::forget("preapplication-email-code-{$this->email}");
+            RateLimiter::clear($key);
+            Mail::to($this->email)->send(new StoreApplicationEmail($storeApplicationData));
+            session()->flash('success','Application submitted successfully. Check your email for more information.');
+            $this->redirect(route('login'));
+        });
+
     }
 };
 ?>

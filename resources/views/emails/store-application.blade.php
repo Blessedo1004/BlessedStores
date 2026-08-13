@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Verify your email</title>
+  <title>Store Registration</title>
   <style>
     /* Reset */
     body,table,td{margin:0;padding:0;border:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
@@ -31,23 +31,28 @@
         <img class="brand" src="{{ asset('imgs/logo/logo.png') }}" alt="logo">
         <div>
           <div style="font-weight:700;color:#222">BlessedStores</div>
-          <div style="font-size:12px;color:#8b8b8b">Verify your email</div>
+          <div style="font-size:12px;color:#8b8b8b">Store Registration</div>
         </div>
       </div>
 
       <div class="email-content">
-        <p class="lead">Almost done — verify your email</p>
-        <p class="muted">Thanks for signing up. To complete your registration, please verify your email address using the code below. This code expires in 15 minutes.</p>
+        <p class="lead">Hi {{ $storeApplicationData->owner_name }}, your application has been submitted successfully. We will review it and get back to you within 7 business days.</p>
 
-        <div class="code-box" role="status" aria-label="Verification code">
-          <div class="code">{{ $code }}</div>
-        </div>
-
-        <p class="hint">Copy and paste the code above on the verification page.</p>
-
-        <hr style="border:none;border-top:1px solid #f0f0f0;margin:18px 0">
-
-        <p class="muted" style="margin:0">If you did not request this, you can safely ignore this email — no action is required.</p>
+        <p>Below are the details of your application:</p>
+        <ul>
+          <li><strong>Store Name:</strong> {{ $storeApplicationData->store_name }}</li>
+          <li><strong>Owner Name:</strong> {{ $storeApplicationData->owner_name }}</li>
+          <li><strong>Email:</strong> {{ $storeApplicationData->email }}</li>
+          <li><strong>Phone Number:</strong> {{ $storeApplicationData->phone_number }}</li>
+          <li><strong>Description:</strong> {{ $storeApplicationData->description }}</li>
+          <li><strong>Address:</strong> {{ $storeApplicationData->address }}</li>
+          <li><strong>Social Media:</strong></li>
+                <ul>
+                @foreach ($storeApplicationData->applicationSocials as $social)
+                    <li>{{ $social->platform }}: {{ $social->user_name }}</li>
+                @endforeach
+                </ul>
+        </ul>
       </div>
 
       <div class="email-footer">

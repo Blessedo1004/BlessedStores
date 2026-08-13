@@ -89,7 +89,7 @@ new class extends Component
 
             $this->addError(
                 'email',
-                "You can only make five attempts per minute. Please wait {$seconds} seconds before trying again."
+                "Too many requests. Please wait {$seconds} seconds before trying again."
             );
 
             return;

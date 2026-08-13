@@ -12,6 +12,8 @@ new class extends Component
      #[Title('Stores')]
      public string $status = '';
      public string $searchTerm = '';
+     public bool $showInfo = false;
+     public ?Store $storeInfo = null;
 
 
      public function with() {
@@ -29,6 +31,21 @@ new class extends Component
         return compact('stores');
      }
 
+     public function showStoreInfo($slug){
+        // Authentication check
+        if(!Auth::check()){
+            $this->redirect(route('login'));
+        }
+
+        // Authorization check
+        else if (!auth()->user()->can('admin-or-super-admin')) {
+            abort(403);
+        }
+
+        $this->storeInfo = Store::with('user','socials')->where('slug' , $slug)->firstOrFail();
+        $this->showInfo = true;
+    }
+
     public function delete($slug){
         // Authentication check
         if(!Auth::check()){
@@ -40,13 +57,12 @@ new class extends Component
             abort(403);
         }
 
-        return DB::transaction(function () {        
-            $store = Store::with('user','socials')->where('slug', $slug)->firstOrFail();
-            $store->user->delete();
+        return DB::transaction(function () use ($slug) {        
+            $store = Store::with('socials')->where('slug', $slug)->firstOrFail();
             $store->socials()->delete();
             $store->delete();
+            session()->flash('store-delete-success', 'Store deleted successfully!');
         });    
-        session()->flash('success', 'Store deleted successfully!');
 
     }
 
@@ -64,14 +80,28 @@ new class extends Component
 
 <div>
     <div class="dashboard-content">
-        @if(session('success'))
+        @if(session('store-registration-success'))
             <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <span>{{session('success')}}</span>
+                <span>{{session('store-registration-success')}}</span>
             </div>
-            
+
+            @elseif (session('store-update-success'))    
+                <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>{{session('store-update-success')}}</span>
+                </div>
+            @elseif ((session('store-delete-success')) )   
+                <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>{{session('store-delete-success')}}</span>
+                </div>    
         @endif
 
         <div class="row d-flex align-items-center justify-content-between mb-4">
@@ -82,16 +112,8 @@ new class extends Component
 
             <div class="col-12 col-lg-8">
                 <div class="row d-flex justify-content-md-center justify-content-lg-end">
-                    <div class="col-12 col-md-4 mt-4 mt-lg-0">
+                    <div class="col-12 mt-4 mt-lg-0">
                         <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search stores by name" wire:model.live.debounce.500ms="searchTerm" inputmode="search">
-                    </div>
-                    <div class="col-12 col-md-6 mt-4 mt-lg-0 text-center">
-                        <a href="{{ route('stores.add') }}" class="fill-btn border-0" wire:navigate>
-                                <span class="fill-btn-inner">
-                                    <span class="fill-btn-normal">Add Store</span>
-                                    <span class="fill-btn-hover">Add Store</span>
-                                </span>
-                        </a>
                     </div>
                 </div>
 
@@ -144,9 +166,12 @@ new class extends Component
                                     {{ $store->status }}
                                 </span>
                             </td>
-                            <td class="d-flex">
-                                <a href="{{ route('stores.edit', $store->slug) }}" class="btn btn-outline-secondary btn-md rounded-pill" wire:navigate>Edit</a>
-                                <button class="btn btn-outline-danger btn-md rounded-pill ms-2" wire:click="delete(@js($store->slug))" wire:confirm="Are you sure you want to delete this store?? This is a permanent action.">Delete</button>
+                            <td>
+                                <div class="d-flex flex-column flex-sm-row align-items-center gap-2">
+                                    <button class="btn btn-outline-info btn-sm rounded-pill" wire:click="showStoreInfo(@js($store->slug))">View Info</button>
+                                    <a href="{{ route('stores.edit', $store->slug) }}" class="btn btn-outline-secondary btn-sm rounded-pill" wire:navigate>Edit</a>
+                                    <button class="btn btn-outline-danger btn-sm rounded-pill" wire:click="delete(@js($store->slug))" wire:confirm="Are you sure you want to delete this store?? This is a permanent action.">Delete</button>
+                                </div>
                             </td>
                             </tr>  
                         @empty
@@ -162,4 +187,44 @@ new class extends Component
         </div>
 
     </div>
+
+    <!-- Store Info Panel -->
+    <div class="store-info-overlay {{ $showInfo ? '' : 'd-none' }}" wire:loading.class.remove="d-none" wire:target="showStoreInfo">
+        <div class="store-info-panel">
+            <div class="store-info-panel-header">
+                <h5 class="store-info-panel-title">Store Information</h5>
+                <button type="button" class="store-info-close" wire:click="$set('showInfo', false)">×</button>
+            </div>
+            <div class="store-info-panel-body">
+                <div class="store-info-card">
+                    @if($showInfo)
+                        <div class="store-info-placeholder">
+                            <p><strong>Store Owner:</strong> {{ $storeInfo->user->name }}</p>
+                            <p><strong>Email:</strong> {{ $storeInfo->user->email }}</p>
+                            <p><strong>Store Name:</strong> {{ $storeInfo->name }}</p>
+                            <p><strong>Address:</strong> {{ $storeInfo->address }}</p>
+                            <p><strong>Logo:</strong> 
+                                <img src="{{ asset('storage/' . $storeInfo->logo) }}" alt="Store Logo" class="img-fluid" style="max-height: 100px;">
+                            </p>
+                            <p><strong>Phone Number:</strong> {{ $storeInfo->phone_number }}</p>
+                            <p><strong>Description:</strong> {{ $storeInfo->description }}</p>
+                            <p><strong>Social Media:</strong></p>
+                            <ul>
+                                @foreach($storeInfo->socials as $social)
+                                    <li><h6 class="platform-name">{{ $social->platform }}:</h6> <span class="username">{{ $social->user_name }}</span></li>
+                                @endforeach
+                            </ul>
+                            <p class="mt-2"><strong>Date of Registration:</strong> {{ $storeInfo->created_at->format('M d, Y') }}</p>
+                            <p><strong>Status:</strong> {{ $storeInfo->status }}</p>
+                        </div>
+                    @else
+                        <div class="store-info-loading">
+                            Loading store details...
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>

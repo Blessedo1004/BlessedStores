@@ -209,7 +209,7 @@ new class extends Component
             $this->store->socials()->createMany($this->social_media);
 
             $this->store->save();
-            session()->flash('success','Store updated successfully');
+            session()->flash('store-update-success','Store updated successfully');
             return $this->redirect(route('stores'), navigate:true);
         });
     }
