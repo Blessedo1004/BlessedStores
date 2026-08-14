@@ -19,7 +19,6 @@
     .code-box{margin:18px 0;padding:18px;border-radius:8px;background:linear-gradient(180deg, #fffef8, #fffaf0);border:1px solid rgba(177,139,94,0.12);display:flex;align-items:center;justify-content:center}
     .code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace;font-size:22px;letter-spacing:2px;color:#b18b5e;font-weight:700}
     .cta{display:inline-block;padding:10px 18px;background:#b18b5e;color:#fff;border-radius:8px;margin-top:8px}
-    .hint{font-size:12px;color:#8a8a8a;margin-top:12px}
     .email-footer{padding:18px 32px;background:#fafafa;border-top:1px solid #f0f0f0;color:#7a7a7a;font-size:13px}
     @media (max-width:420px){.email-body{border-radius:6px}.email-header{padding:18px}.email-content{padding:18px}}
   </style>
@@ -36,14 +35,15 @@
       </div>
 
       <div class="email-content">
-        <p class="lead">Hi {{ $name }}, your store, {{ $store_name }} has been registered successfully</p>
-        <p class="muted">You can log into your account using your email address and your password below</p>
+        <p class="lead">Hi {{ $name }}, your application for the store, {{ $store_name }} has been approved and the store has been registered successfully</p>
+        <p class="lead">You can log into your account using your email address and your password below</p>
 
         <div class="code-box" role="status" aria-label="Verification code">
           <div class="code">{{ $password }}</div>
         </div>
 
-        <p class="hint">You are advised to change your password to a stronger one after you log in.</p>
+        <p class="lead">You are advised to change your password to a stronger one after you log in.</p>
+        <p class="lead">Thank you for choosing BlessedStores!</p>
       </div>
 
       <div class="email-footer">

@@ -341,7 +341,7 @@ new class extends Component
                             <span class="fill-btn-normal">Send Application</span>
                             <span class="fill-btn-hover">Send Application</span>
                         </span>
-                        <span class="fill-btn-inner" wire:loading wire:target="signup">
+                        <span class="fill-btn-inner" wire:loading wire:target="verify">
                             <span>Please wait...</span>
                         </span>
                     </button>

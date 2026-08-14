@@ -188,7 +188,7 @@ new class extends Component
     </div>
 
     <!-- Store Info Panel -->
-    <div class="store-info-overlay {{ $showInfo ? '' : 'd-none' }}" wire:loading.class.remove="d-none" wire:target="showStoreInfo">
+    <div class="store-info-overlay {{ $showInfo ? '' : 'd-none' }}" wire:loading.class.remove="d-none" wire:target="showStoreInfo" wire:transition>
         <div class="store-info-panel">
             <div class="store-info-panel-header">
                 <h5 class="store-info-panel-title">Store Information</h5>
@@ -197,7 +197,7 @@ new class extends Component
             <div class="store-info-panel-body">
                 <div class="store-info-card">
                     @if($showInfo)
-                        <div class="store-info-placeholder">
+                        <div class="store-info-placeholder" wire:transition>
                             <p><strong>Store Owner:</strong> {{ $storeInfo->user->name }}</p>
                             <p><strong>Email:</strong> {{ $storeInfo->user->email }}</p>
                             <p><strong>Store Name:</strong> {{ $storeInfo->name }}</p>
