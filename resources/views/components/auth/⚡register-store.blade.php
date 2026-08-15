@@ -291,6 +291,7 @@ new class extends Component
                                 <option value="youtube">YouTube</option>
                                 <option value="tiktok">TikTok</option>
                                 <option value="facebook">Facebook</option>
+                                <option value="linkedin">LinkedIn</option>
                             </select>
                             @error('platform')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>

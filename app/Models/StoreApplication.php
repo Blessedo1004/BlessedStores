@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class StoreApplication extends Model
 {
+    use HasFactory;
+
     protected $fillable = ['owner_name', 'store_name',  'email','phone_number', 'logo', 'slug', 'description', 'address', 'status', 'reviewed_by', 'reviewed_at', 'rejection_reason'];
 
     protected $casts = [

@@ -244,6 +244,9 @@ new class extends Component
                     </tbody>
                 </table>
             </div>
+            <div class="p-3">
+                {{ $stores->links() }}
+            </div>
         </div>
 
     </div>
