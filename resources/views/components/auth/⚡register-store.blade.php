@@ -338,7 +338,7 @@ new class extends Component
 
                     <!-- Action Button -->
                     <button type="submit" class="fill-btn w-100 border-0" wire:loading.attr="disabled">
-                        <span class="fill-btn-inner" wire:loading.remove wire:target="signup">
+                        <span class="fill-btn-inner" wire:loading.remove wire:target="verify">
                             <span class="fill-btn-normal">Send Application</span>
                             <span class="fill-btn-hover">Send Application</span>
                         </span>
@@ -354,7 +354,7 @@ new class extends Component
                 </div>
 
                 <div class="text-center mt-4 small text-muted">
-                        <span>Want to sign up as a customer? <a href="{{ route('signUp') }}" class="text-color-1 text-decoration-none fw-bold">Sign Up</a></span>
+                        <span>Want to sign up as a customer? <a href="{{ route('signUp') }}" class="text-color-1 text-decoration-none fw-bold" wire:navigate>Sign Up</a></span>
                 </div>
 
             </div>

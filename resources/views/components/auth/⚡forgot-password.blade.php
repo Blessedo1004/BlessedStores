@@ -30,7 +30,7 @@ new class extends Component
 
             $this->addError(
                 'email',
-                "You can only request a verification code twice per minute. Please wait {$seconds} seconds before trying again."
+                "Too many attempts. Please wait {$seconds} seconds before trying again."
             );
 
             return;

@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Mail\StoreRegistrationEmail;
+use App\Mail\StoreRejectionEmail;
+use Livewire\Attributes\Validate;
 
 new class extends Component
 {
@@ -19,8 +21,11 @@ new class extends Component
      public string $status = '';
      public string $searchTerm = '';
      public ?StoreApplication $storeInfo = null;
-    public ?string $currentShowSlug = null;
-    public bool $isShowingApplication = false;
+     public ?string $currentShowSlug = null;
+     public bool $isShowingApplication = false;
+     public bool $showRejectionReason = false;
+     #[Validate('required|string|min:10|max:255')]
+     public string $rejection_reason = '';
 
 
      public function with() {
@@ -68,6 +73,9 @@ new class extends Component
         $this->storeInfo = null;
         $this->currentShowSlug = null;
         $this->isShowingApplication = false;
+        if ($this->rejection_reason) {
+           $this->rejection_reason = false;
+        }
     }
 
     public function approveApplication (){
@@ -135,10 +143,66 @@ new class extends Component
             $this->storeInfo = null;
             $this->currentShowSlug = null;
             $this->isShowingApplication = false;
+            if ($this->rejection_reason) {
+               $this->rejection_reason = '';
+            }
 
             Mail::to($email)->send(new StoreRegistrationEmail($password, $owner, $name));
-            session()->flash('store-registration-success','Store registered successfully');
+            session()->flash('success','Store registered successfully');
         });
+    }
+
+    public function rejectApplication (){
+        // Authentication check
+        if(!Auth::check()){
+            $this->redirect(route('login'));
+        }
+
+        // Authorization check
+        else if (!auth()->user()->can('admin-or-super-admin')) {
+            abort(403);
+        }
+
+       // Rate limiting 
+       $key = 'reject-application:' . request()->ip();
+       
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+
+            $this->addError(
+                'create',
+                "Too many requests. Please wait {$seconds} seconds before trying again."
+            );
+        return;
+       }
+
+        // Allow five requests every five minutes from each IP address.
+        RateLimiter::hit($key, 60 * 5);
+
+        return DB::transaction(function () {
+            $this->storeInfo->status = 'rejected';
+            $this->storeInfo->reviewed_by = auth()->user()->id;
+            $this->storeInfo->reviewed_at = now();
+            $this->storeInfo->rejection_reason = $this->rejection_reason;
+            $this->storeInfo->save();
+
+            $email = $this->storeInfo->email;
+            $owner = $this->storeInfo->owner_name;
+            $name = $this->storeInfo->store_name;
+            $rejection_reason = $this->rejection_reason;
+
+            $this->storeInfo = null;
+            $this->currentShowSlug = null;
+            $this->isShowingApplication = false;
+            $this->showRejectionReason = false;
+            if ($this->rejection_reason) {
+               $this->rejection_reason = '';
+            }
+
+            Mail::to($email)->send(new StoreRejectionEmail($owner, $name, $rejection_reason));
+            session()->flash('success','Store application rejected successfully');
+        });
+
     }
 
     public function updatedStatus()
@@ -155,12 +219,12 @@ new class extends Component
 
 <div>
     <div class="dashboard-content">
-        @if(session('store-registration-success'))
+        @if(session('success'))
             <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <span>{{session('store-registration-success')}}</span>
+                <span>{{session('success')}}</span>
             </div>
         @endif    
         <div class="row d-flex align-items-center justify-content-between mb-4">
@@ -304,18 +368,40 @@ new class extends Component
                                         </button>
                                     </div>
                                     <div class="col-12 col-lg-6 mt-4 mt-lg-0">
-                                        <button class="fill-btn-red">
-                                            <span class="fill-btn-inner" wire:loading.remove wire:target="rejectApplication">
+                                        <button class="fill-btn-red" wire:click="$set('showRejectionReason', true)" wire:loading.attr="disabled" @disabled($showRejectionReason)>
+                                            <span class="fill-btn-inner" wire:loading.remove wire:target="showRejectionReason">
                                                 <span class="fill-btn-normal">Reject</span>
                                                 <span class="fill-btn-hover">Reject</span>
                                             </span>
 
-                                            <span class="fill-btn-inner" wire:loading wire:target="rejectApplication">
-                                                <span class="fill-btn-normal">Reject</span>
-                                                <span class="fill-btn-hover">Reject</span>
+                                            <span class="fill-btn-inner" wire:loading wire:target="showRejectionReason">
+                                                <span class="fill-btn-normal">Please wait...</span>
+                                                <span class="fill-btn-hover">Please wait...</span>
                                             </span>
                                         </button>
                                     </div>    
+                                @endif
+                                @if ($showRejectionReason)
+                                    <p class="mt-4">
+                                       <strong>Reason for rejection</strong>
+                                    </p>
+                                    <textarea rows="3" wire:model.live.debounce.500ms="rejection_reason" class="mt-2"></textarea>
+                                    @error('rejection_reason')
+                                        <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                                    @enderror
+                                    <div class="col-12 col-lg-6 mt-4">
+                                        <button class="fill-btn border-0" wire:click="rejectApplication" wire:loading.attr="disabled">                        
+                                            <span class="fill-btn-inner" wire:loading.remove wire:target="rejectApplication">
+                                                <span class="fill-btn-normal">Send Rejection</span>
+                                                <span class="fill-btn-hover">Send Rejection</span>
+                                            </span>
+
+                                            <span class="fill-btn-inner" wire:loading wire:target="rejectApplication">
+                                                <span class="fill-btn-normal">Sending...</span>
+                                                <span class="fill-btn-hover">Sending...</span>
+                                            </span>
+                                        </button>
+                                    </div>     
                                 @endif
                             </div>
                         </div>

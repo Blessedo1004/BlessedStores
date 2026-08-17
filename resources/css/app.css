@@ -115,6 +115,8 @@ textarea{
 
 .dashboard-content {
     padding: 32px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 /* Stat Cards */

@@ -10,16 +10,21 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class RegistrationEmail extends Mailable implements ShouldQueue
+class StoreRejectionEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    public $name;
+    public $store_name;
+    public $rejection_reason;
     /**
      * Create a new message instance.
      */
-    public function __construct()
+    public function __construct($name, $store_name, $rejection_reason)
     {
-        //
+        $this->name = $name;
+        $this->store_name = $store_name;
+        $this->rejection_reason = $rejection_reason;
     }
 
     /**
@@ -28,7 +33,7 @@ class RegistrationEmail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Registration Email',
+            subject: 'Store Rejection Email',
         );
     }
 
@@ -38,7 +43,7 @@ class RegistrationEmail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'emails.store-rejection',
         );
     }
 

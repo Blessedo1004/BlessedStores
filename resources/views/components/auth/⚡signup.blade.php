@@ -278,7 +278,7 @@ new class extends Component
                 </div>
 
                 <div class="text-center mt-4 small text-muted">
-                        <span>Want to register a store? <a href="{{ route('register-store') }}" class="text-color-1 text-decoration-none fw-bold">Register Store</a></span>
+                        <span>Want to register a store? <a href="{{ route('register-store') }}" class="text-color-1 text-decoration-none fw-bold" wire:navigate>Register Store</a></span>
                 </div>
 
             </div>
