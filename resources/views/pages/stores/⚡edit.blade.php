@@ -19,7 +19,7 @@ new class extends Component
     #[Title('Edit Store')]
 
     public Store $store;
-    public string $name ;
+    public string $name;
     public string $email = '';
     public string $store_name = '';
     public string $phone_number ;
@@ -162,14 +162,14 @@ new class extends Component
         }
 
        // Rate limiting
-       $key = 'update-store:' . request()->ip();
+        $key = 'update-store:' . $this->store->id . ':' . request()->ip();
        
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
 
             $this->addError(
                 'update',
-                "You can only update five stores in 5 minutes. Please wait {$seconds} seconds before trying again."
+                "Too many requests. Please wait {$seconds} seconds before trying again."
             );
         return;
        }
@@ -209,7 +209,7 @@ new class extends Component
             $this->store->socials()->createMany($this->social_media);
 
             $this->store->save();
-            session()->flash('store-update-success','Store updated successfully');
+            session()->flash('success','Store updated successfully');
             return $this->redirect(route('stores'), navigate:true);
         });
     }
@@ -400,7 +400,7 @@ new class extends Component
                                     </button>
                                 </div>
                                 <div class="col-12 col-sm-6 mt-4 mt-sm-0">
-                                    <a href="{{ route('stores') }}" class="fill-btn-red">
+                                    <a href="{{ route('stores') }}" class="fill-btn-red" wire:navigate>
                                         <span class="fill-btn-inner">
                                             <span class="fill-btn-normal">Cancel</span>
                                             <span class="fill-btn-hover">Cancel</span>

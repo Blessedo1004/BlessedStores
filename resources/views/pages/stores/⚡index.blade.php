@@ -17,17 +17,31 @@ new class extends Component
 
 
      public function with() {
-        $stores = Store::with('user:id,name,email','socials') 
-            ->when($this->status , function($query){
-            $query->where('status' , $this->status);
-        })
-        ->when($this->searchTerm , function($query){
-            $query->where('slug', 'like', '%'.trim($this->searchTerm).'%')
-            ->orWhere('name', 'like', '%'.trim($this->searchTerm).'%')
-            ->orWhere('address', 'like', '%'.trim($this->searchTerm).'%');
-        })
+        $user = auth()->user();
+        $isAdmin = $user->can('admin-or-super-admin');
+
+        $query = Store::with('user:id,name,email', 'socials')
+            ->when(!$isAdmin, function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->when($this->status, function ($query) {
+                $query->where('status', $this->status);
+            })
+            ->when($this->searchTerm, function ($query) {
+                $search = '%' . trim($this->searchTerm) . '%';
+
+                $query->where(function ($query) use ($search) {
+                    $query->where('slug', 'like', $search)
+                        ->orWhere('name', 'like', $search)
+                        ->orWhere('address', 'like', $search);
+                });
+            });
+
+        $stores = (clone $query)
         ->latest()->paginate(10)->onEachSide(0);
-        return compact('stores');
+
+        $count = (clone $query)->count();
+        return compact('stores', 'count');
      }
 
      public function showStoreInfo($slug){
@@ -36,12 +50,13 @@ new class extends Component
             $this->redirect(route('login'));
         }
 
+        $this->storeInfo = Store::with('user','socials')->where('slug' , $slug)->firstOrFail();
+
         // Authorization check
-        else if (!auth()->user()->can('admin-or-super-admin')) {
+        if (!auth()->user()->can('admin-or-super-admin') && $this->storeInfo->user_id !== auth()->id()) {
             abort(403);
         }
-
-        $this->storeInfo = Store::with('user','socials')->where('slug' , $slug)->firstOrFail();
+        
         $this->showInfo = true;
     }
 
@@ -56,11 +71,28 @@ new class extends Component
             abort(403);
         }
 
-        return DB::transaction(function () use ($slug) {        
-            $store = Store::with('socials')->where('slug', $slug)->firstOrFail();
+        $store = Store::with('socials')->where('slug', $slug)->firstOrFail();
+
+        // Rate limiting
+        $key = 'delete-store:' . $store->id . ':' . request()->ip();
+       
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+
+            $this->addError(
+                'delete',
+                "Too many requests. Please wait {$seconds} seconds before trying again."
+            );
+        return;
+       }
+
+        // Allow five requests every five minutes from each IP address.
+        RateLimiter::hit($key, 60 * 5);
+
+        return DB::transaction(function () use ($store){        
             $store->socials()->delete();
             $store->delete();
-            session()->flash('store-delete-success', 'Store deleted successfully!');
+            session()->flash('success', 'Store deleted successfully!');
         });    
 
     }
@@ -79,28 +111,27 @@ new class extends Component
 
 <div>
     <div class="dashboard-content">
-        @if(session('store-registration-success'))
+        @if(session('success'))
             <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <span>{{session('store-registration-success')}}</span>
-            </div>
+                <span>{{session('success')}}</span>
+            </div>   
+        @endif
 
-            @elseif (session('store-update-success'))    
-                <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
+        
+         @if ($errors->any())
+            @foreach ($errors->all() as $error)
+                <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center" role="alert">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    <span>{{session('store-update-success')}}</span>
+                    <ul class="mb-0 ps-2 list-unstyled">
+                            <li>{{ $error }}</li>
+                    </ul>
                 </div>
-            @elseif ((session('store-delete-success')) )   
-                <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>{{session('store-delete-success')}}</span>
-                </div>    
+            @endforeach
         @endif
 
         <div class="row d-flex align-items-center justify-content-between mb-4">
@@ -112,7 +143,7 @@ new class extends Component
             <div class="col-12 col-lg-8">
                 <div class="row d-flex justify-content-md-center justify-content-lg-end">
                     <div class="col-12 mt-4 mt-lg-0">
-                        <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search stores by name" wire:model.live.debounce.500ms="searchTerm" inputmode="search">
+                        <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search stores by name or address" wire:model.live.debounce.500ms="searchTerm" inputmode="search">
                     </div>
                 </div>
 
@@ -132,7 +163,7 @@ new class extends Component
             </div>
             <div class="p-4 bg-white border-bottom d-flex align-items-center justify-content-between">
                 <h6 class="fw-bold text-dark mb-0">Stores</h6>
-                <span class="text-muted small">Total: {{ $stores->count()}}</span>
+                <span class="text-muted small">Total: {{ $count}}</span>
             </div>
 
             <div class="table-responsive">

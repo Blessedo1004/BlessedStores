@@ -24,12 +24,12 @@
 </head>
 <body>
 
-    @if(session('success'))
+    @if(session('login-success'))
         <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-9 col-md-5 position-fixed">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-            <span>{{session('success')}}</span>
+            <span>{{session('login-success')}}</span>
         </div>
         
     @endif
@@ -110,7 +110,7 @@
                     </a>
 
                     @can('super-admin')
-                      <a class="nav-link" href="#" wire:navigate>
+                      <a class="nav-link {{ request()->routeIs('admins') || request()->routeIs('admins.create') || request()->routeIs('admins.edit') ? 'active' : ''}} }}" href="{{ route('admins') }}" wire:navigate>
                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                           </svg>
@@ -118,8 +118,8 @@
                       </a>
                     @endcan
 
-                    @if (Gate::allows('super-admin') || Gate::allows('admin'))
-                          <a class="nav-link {{ request()->routeIs('stores') || request()->routeIs('stores.add') ? 'active' : ''}}" href="{{ route('stores') }}" wire:navigate>
+                    @if (Gate::allows('super-admin') || Gate::allows('admin') || Gate::allows('store'))
+                          <a class="nav-link {{ request()->routeIs('stores') || request()->routeIs('stores.edit') ? 'active' : ''}}" href="{{ route('stores') }}" wire:navigate>
                               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                   <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21V16.5h-3V21m-6.213-9.103V18.75a.75.75 0 0 0 .75.75h14.25a.75.75 0 0 0 .75-.75v-6.853m-15.75 0a.75.75 0 0 1 .462-.692l7.5-3a.75.75 0 0 1 .576 0l7.5 3a.75.75 0 0 1 .462.692M3.75 12h16.5" />
                               </svg>
