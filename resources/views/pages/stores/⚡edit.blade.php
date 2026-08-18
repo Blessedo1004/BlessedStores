@@ -30,7 +30,7 @@ new class extends Component
     public string $platform ;
     public string $user_name ;
     public array $social_media;
-    public string $status = 'active';
+    public string $status;
 
 
     public function mount($slug){

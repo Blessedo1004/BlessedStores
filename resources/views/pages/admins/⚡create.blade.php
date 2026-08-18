@@ -2,19 +2,14 @@
 
 use Livewire\Component;
 use Livewire\Attributes\Title;
-use Livewire\WithFileUploads;
-use Livewire\Attributes\Validate;
 use App\Models\User;
-use App\Models\Store;
-use App\Models\Social;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use App\Mail\StoreRegistrationEmail;
+use App\Mail\AdminRegistrationEmail;
 
 new class extends Component
 {
-    use WithFileUploads;
     #[Title('Add an Admin')]
 
     public string $name = '';
@@ -146,8 +141,8 @@ new class extends Component
                                             </span>
 
                                             <span class="fill-btn-inner" wire:loading wire:target="save">
-                                                <span class="fill-btn-normal">Adding</span>
-                                                <span class="fill-btn-hover">Adding</span>
+                                                <span class="fill-btn-normal">Adding...</span>
+                                                <span class="fill-btn-hover">Adding...</span>
                                             </span>
                                     </button>
                                 </div>

@@ -29,7 +29,7 @@ Route::group(['middleware' => ['auth', 'cache.headers:no_store,private']], funct
    Route::livewire('/store-applications', 'stores/⚡applications')->name('store-applications')->middleware(['can:admin-or-super-admin']);
    Route::livewire('/admins', 'admins/⚡index')->name('admins')->middleware(['can:super-admin']);
    Route::livewire('/admins/create', 'admins/⚡create')->name('admins.create')->middleware(['can:super-admin']);
-   Route::livewire('/admins/edit/{slug}', 'admins/⚡edit')->name('admins.edit')->middleware(['can:super-admin']); 
+   Route::livewire('/admins/edit/{user}', 'admins/⚡edit')->name('admins.edit')->middleware(['can:super-admin']); 
 });
 
 Route::get('/payment', [PaymentController::class, 'showForm'])->name('payment.form');

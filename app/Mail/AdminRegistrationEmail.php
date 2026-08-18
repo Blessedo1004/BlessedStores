@@ -10,16 +10,19 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class AdminRegistrationEmail extends Mailable
+class AdminRegistrationEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
+    public $password;
+    public $name;
 
     /**
      * Create a new message instance.
      */
-    public function __construct()
+    public function __construct($password, $name)
     {
-        //
+        $this->password = $password;
+        $this->name = $name;
     }
 
     /**
@@ -38,7 +41,7 @@ class AdminRegistrationEmail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'emails.admin-registration',
         );
     }
 

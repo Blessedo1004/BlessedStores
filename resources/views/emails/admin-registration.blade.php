@@ -30,19 +30,19 @@
         <img class="brand" src="{{ asset('imgs/logo/logo.png') }}" alt="logo">
         <div>
           <div style="font-weight:700;color:#222">BlessedStores</div>
-          <div style="font-size:12px;color:#8b8b8b">Store Registration</div>
+          <div style="font-size:12px;color:#8b8b8b">Admin Registration</div>
         </div>
       </div>
 
       <div class="email-content">
-        <p class="lead">Hi {{ $name }}, your application for the store, {{ $store_name }} has been approved and the store has been registered successfully</p>
+        <p class="lead">Hi {{ $name }}, your admin account has been registered successfully</p>
         <p class="lead">You can log into your account using your email address and your password below</p>
 
         <div class="code-box" role="status" aria-label="Verification code">
           <div class="code">{{ $password }}</div>
         </div>
 
-        <p class="lead">You are advised to change your password to a stronger one after you log in.  Do not share it with anyone.</p>
+        <p class="lead">You are advised to change your password to a stronger one after you log in. Do not share it with anyone.</p>
         <p class="lead">Thank you for choosing BlessedStores!</p>
       </div>
 

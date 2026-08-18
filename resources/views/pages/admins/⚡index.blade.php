@@ -150,8 +150,8 @@ new class extends Component
                         <tr>
                             <th>Name</th>
                             <th>Email</th>
-                            <th>Status</th>
                             <th>Date Of Registration</th>
+                            <th>Status</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -160,7 +160,7 @@ new class extends Component
                         <tr wire:key="admin-{{ $admin->id }}" wire:transition>
                             <td class="fw-semibold text-dark">{{ Str::limit($admin->name, 30) }}</td>
                             <td>{{ $admin->email }}</td>
-                            <td>{{ $store->created_at->format('M d,Y') }}</td>
+                            <td>{{ $admin->created_at->format('M d,Y') }}</td>
                             <td>
                                 <span class="status-badge {{ $admin->status === 'active' ? 'bg-success' : 'bg-danger'}}">
                                     {{ $admin->status }}
@@ -168,8 +168,8 @@ new class extends Component
                             </td>
                             <td>
                                 <div class="d-flex flex-column flex-sm-row align-items-center gap-2">
-                                    <a href="{{ route('admins.edit') }}" class="btn btn-outline-secondary btn-sm rounded-pill" wire:navigate>Edit</a>
-                                    <button class="btn btn-outline-danger btn-sm rounded-pill" wire:click="delete({{ $admin->id }})" wire:confirm="Are you sure you want to delete this store?? This is a permanent action." wire:loading.attr="disabled">Delete</button>
+                                    <a href="{{ route('admins.edit', $admin) }}" class="btn btn-outline-secondary btn-sm rounded-pill" wire:navigate>Edit</a>
+                                    <button class="btn btn-outline-danger btn-sm rounded-pill" wire:click="delete({{ $admin->id }})" wire:confirm="Are you sure you want to delete this admin?? This is a permanent action." wire:loading.attr="disabled">Delete</button>
                                 </div>
                             </td>
                             </tr>  
