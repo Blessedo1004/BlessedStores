@@ -101,10 +101,7 @@ new class extends Component
         if (!Hash::check($this->currentPassword , $this->user->password)) {
             return $this->addError('currentPassword' , 'Wrong Password');
         }
-
-        // Livewire actions are sent through its update endpoint, where the
-        // route's `auth.session` middleware is not run. Update the current
-        // session's password marker ourselves after invalidating other devices.
+        
         $user = Auth::user();
 
         $user->password = Hash::make($this->password);
