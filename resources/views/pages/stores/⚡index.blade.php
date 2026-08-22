@@ -206,7 +206,7 @@ new class extends Component
                             </tr>  
                         @empty
                             <tr>
-                                <td colspan="7" class="text-muted text-center py-4">No stores found.</td>
+                                <td colspan="7" class="text-muted text-center py-4">{{ $searchTerm ? "No results found for '{$searchTerm}'" : "No stores found." }}</td>
                             </tr>     
                         @endforelse
 

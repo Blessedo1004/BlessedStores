@@ -22,14 +22,17 @@ Route::middleware('cache.headers:no_store,private')->controller(AuthController::
     Route::post('/login','signIn')->name('auth.signin')->middleware('throttle:auth');
 });
 
-Route::group(['middleware' => ['auth', 'cache.headers:no_store,private']], function () {
+Route::group(['middleware' => ['auth', 'cache.headers:no_store,private', 'auth.session']], function () {
    Route::livewire('/dashboard', '⚡dashboard')->name('dashboard');
    Route::livewire('/stores', 'stores/⚡index')->name('stores')->middleware(['can:admin-super-admin-or-store']);
    Route::livewire('/stores/edit/{slug}', 'stores/⚡edit')->name('stores.edit')->middleware(['can:admin-super-admin-or-store']);
    Route::livewire('/store-applications', 'stores/⚡applications')->name('store-applications')->middleware(['can:admin-or-super-admin']);
    Route::livewire('/admins', 'admins/⚡index')->name('admins')->middleware(['can:super-admin']);
    Route::livewire('/admins/create', 'admins/⚡create')->name('admins.create')->middleware(['can:super-admin']);
-   Route::livewire('/admins/edit/{user}', 'admins/⚡edit')->name('admins.edit')->middleware(['can:super-admin']); 
+   Route::livewire('/admins/edit/{user}', 'admins/⚡edit')->name('admins.edit')->middleware(['can:super-admin']);
+   Route::livewire('/profile', '⚡profile')->name('profile');
+   Route::livewire('/change-password', '⚡change-password')->name('change-password');
+   Route::livewire('/products', 'products/⚡index')->name('products')->middleware(['can:store']); 
 });
 
 Route::get('/payment', [PaymentController::class, 'showForm'])->name('payment.form');

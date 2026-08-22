@@ -78,7 +78,7 @@
                     </a>
                     
                     @can('store')
-                      <a class="nav-link" href="#" wire:navigate>
+                      <a class="nav-link" href="#" {{ request()->routeIs('products.index') || request()->routeIs('products.create') || request()->routeIs('products.edit') ? 'active' : ''}} wire:navigate>
                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                           </svg>
@@ -186,10 +186,13 @@
                             {{-- <div class="rounded-circle d-flex align-items-center justify-content-center bg-color-1 text-white fw-bold shadow-sm" style="width: 40px; height: 40px; background-color: var(--primary-color);">
                                 
                             </div> --}}
-                            <div class="text-start d-none d-sm-block">
-                                <h5 class="mb-0">{{ Auth::user()->name }}</h5>
-                                <h6 class="text-muted">{{ Auth::user()->email }}</h6>
-                            </div>
+                            <a href="{{ route('profile') }}" wire:navigate>
+                                <div class="text-start d-none d-sm-block">
+                                    <h5 class="mb-0">{{ Auth::user()->name }}</h5>
+                                    <h6 class="text-muted">{{ Auth::user()->email }}</h6>
+                                </div>
+                            </a>
+
                         </button>
                     </div>
                 </div>

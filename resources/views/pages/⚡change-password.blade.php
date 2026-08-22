@@ -1,31 +1,32 @@
 <?php
 
 use Livewire\Component;
-use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Cache;
-use App\Mail\PreRegistrationEmail;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
 
 new class extends Component
 {
-   #[Layout('components.layouts.auth')] 
-   #[Title('Sign Up')]
+    #[Title('Change Password')]
 
-    public string $name = '';
+    public User $user;
 
-    public string $email = '';
+    public string $currentPassword = '';
 
     public string $password = '';
 
     public string $password_confirmation = '';
 
+    public $showCurrentPassword = false;
+
     public $showPassword = false;
     
     public $showConfirmPassword = false;
+
+    public function mount(){
+        $this->user = auth()->user();
+    }
 
     // Custom messages only for password fields
     protected $messages = [
@@ -36,6 +37,7 @@ new class extends Component
         'password_confirmation.required' => 'Please confirm your password',
         'password_confirmation.same' => 'Passwords do not match',
     ];
+
 
     public function updated($property)
     {
@@ -48,20 +50,10 @@ new class extends Component
     protected function rules(): array
     {
         return [
-            'name' => [
+            'currentPassword' => [
                 'required',
                 'string',
-                'min:3',
-                'max:20',
-                'regex:/^[^<>]*$/',
             ],
-
-            'email' => [
-                'required',
-                'email',
-                'unique:users,email',
-            ],
-
             'password' => [
                 'required',
                 'string',
@@ -76,19 +68,25 @@ new class extends Component
                 'required',
                 'same:password',
             ],
-        ];
+
+    ];
     }
 
-    public function signup()
-    {
-       // Rate limiting 
-       $key = 'signup:' . request()->ip();
+
+    public function save(){
+        // Authentication check
+        if(!Auth::check()){
+            $this->redirect(route('login'));
+        }
+
+       // Rate limiting
+        $key = 'update-profile:' . $this->user->id . ':' . request()->ip();
        
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
 
             $this->addError(
-                'create',
+                'update',
                 "Too many requests. Please wait {$seconds} seconds before trying again."
             );
         return;
@@ -97,41 +95,51 @@ new class extends Component
         // Allow five requests every five minutes from each IP address.
         RateLimiter::hit($key, 60 * 5);
 
-        $userData = $this->validate($this->rules(), $this->messages);
+        // Validation
+        $this->validate($this->rules(), $this->messages);
 
-        $existingCode = Cache::get("preregistration-email-code-{$this->email}");
-
-        if($existingCode){
-            Cache::forget("preregistration-email-for-{$existingCode}");
-            Cache::forget("preregistration-email-code-{$this->email}");
-       }
-
-        $code = Str::random(6);
-        Cache::put("preregistration-email-for-{$code}", $userData, 15 * 60);
-        Cache::put("preregistration-email-code-{$this->email}", $code, 15 * 60);
-        Mail::to($this->email)->send(new PreRegistrationEmail($code));
-        RateLimiter::hit('resend-code:' . $this->email, 60);
-        session()->flash('email', $this->email);
-        $this->redirect(route('preregistration-notice'), navigate: true);
-    }
-
-    public function mount()
-    {
-        if (Auth::check()) {
-            redirect()->route('dashboard');
+        if (!Hash::check($this->currentPassword , $this->user->password)) {
+            return $this->addError('currentPassword' , 'Wrong Password');
         }
-    }
-}
-?>
 
-<div class="w-100" style="max-width: 500px;">
+        // Livewire actions are sent through its update endpoint, where the
+        // route's `auth.session` middleware is not run. Update the current
+        // session's password marker ourselves after invalidating other devices.
+        $user = Auth::user();
+
+        $user->password = Hash::make($this->password);
+        $user->save();
+
+        Auth::logoutOtherDevices($this->password);
+
+        request()->session()->regenerate();
+        request()->session()->put(
+            'password_hash_'.Auth::getDefaultDriver(),
+            Auth::guard()->hashPasswordForCookie($user->getAuthPassword())
+        );
+        session()->flash('success','Password updated successfully');
+        $this->redirect(route('profile'), navigate:true);
+    }
+    
+};
+?>
+<div class="dashboard-content">
+        @if(session('success'))
+            <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center position-fixed">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{{session('success')}}</span>
+            </div>    
+        @endif
+
         @php
             $rateLimitErrors = collect($errors->messages())
-                ->except(['name','email', 'password', 'password_confirmation'])
+                ->except(['currentPassword', 'password', 'password_confirmation'])
                 ->flatten();
-        @endphp
-
-        @if ($rateLimitErrors->isNotEmpty())
+        @endphp 
+        
+         @if ($rateLimitErrors->isNotEmpty())
             @foreach ($rateLimitErrors as $error)
                 <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center" role="alert">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
@@ -144,44 +152,45 @@ new class extends Component
             @endforeach
         @endif
 
-         <!-- Main Signup Card -->
-        <div class="card border-0 shadow-sm rounded-4 auth-card">
+        <div class="mb-4">
+            <h5 class="fw-bold text-dark mb-1">Change Password</h5>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body p-4 p-md-5">
-                
-                <!-- Brand Info Header -->
-                <div class="text-center mb-4">
-                    <a href="{{ route('home') }}">
-                        <img src="{{ asset('imgs/logo/logo.png') }}" alt="logo" class="mb-3 logo">
-                    </a>
-                    <h1 class="h4 fw-bold text-dark mb-1" style="font-family: 'Sora', sans-serif;">Create an Account</h1>
-                    <p class="text-muted small mb-0">Fill in the details below to get started</p>
-                </div>
 
-                <!-- Signup Form -->
-                <form class="needs-validation" wire:submit="signup">
-            
-                    <!-- Name Input -->
+                <form wire:submit="save" class="needs-validation" novalidate>
+
+
+                    <div class="row g-3 justify-content-center">
+
                     <div class="mb-3">
-                        <label for="name" class="form-label fw-semibold text-dark small mb-2">Full Name</label>
-                        <input id="name" type="text" placeholder="John Doe" class="@error('name') is-invalid @enderror" required autofocus wire:model.live.debounce.500ms="name">
-                        @error('name')
-                            <div class="invalid-feedback mt-1 ">{{ $message }}</div>
+                        <label for="password_confirmation" class="form-label fw-semibold text-dark small mb-0">Current Password</label>
+                        <div class="position-relative">
+                            <input id="password_confirmation" type="{{ $showCurrentPassword ? 'text' : 'password' }}" placeholder="••••••••" class="@error('currentPassword') is-invalid @enderror" required style="padding-right: 50px;" wire:model="currentPassword">
+                            <button class="position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-4 text-muted" type="button" id="togglePasswordBtn" style="height: 100%; display: flex; align-items: center; z-index: 10;" aria-label="Toggle Password Visibility">
+                                <!-- Eye Icon SVG (Visible by default) -->
+                                @if(!$showCurrentPassword)
+                                    <svg id="eyeOpenIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" wire:click="$set('showCurrentPassword', true)" wire:loading.attr="disabled">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                @else
+                                    <!-- Eye-Slash Icon SVG -->
+                                    <svg id="eyeClosedIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" wire:click="$set('showCurrentPassword', false)" wire:loading.attr="disabled">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                    </svg>  
+                                @endif
+                            </button>
+                        </div>
+                        @error('currentPassword')
+                            <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                         @enderror
                     </div>
-
-                    <!-- Email Input -->
-                    <div class="mb-3">
-                        <label for="email" class="form-label fw-semibold text-dark small mb-2">Email Address</label>
-                        <input id="email" type="email" placeholder="name@example.com" class="@error('email') is-invalid @enderror" required wire:model.live.debounce.500ms="email">
-                        @error('email')
-                            <div class="invalid-feedback mt-1 ">{{ $message }}</div>
-                        @enderror
-                    </div>
-
                     <!-- Password Input -->
                     <div class="mb-3">
                         <div class="d-flex justify-content-between mb-2 flex-column">
-                            <label for="password" class="form-label fw-semibold text-dark small mb-0">Password</label>
+                            <label for="password" class="form-label fw-semibold text-dark small mb-0">New Password</label>
                             <div class="text-muted small">Minimum of 8 characters with at least one uppercase letter, one lowercase letter,one number and one special character</div>
                         </div>
                         <div class="position-relative">
@@ -237,7 +246,7 @@ new class extends Component
 
                     <!-- Password Confirmation Input -->
                     <div class="mb-3">
-                        <label for="password_confirmation" class="form-label fw-semibold text-dark small mb-0">Confirm Password</label>
+                        <label for="password_confirmation" class="form-label fw-semibold text-dark small mb-0">Confirm New Password</label>
                         <div class="position-relative">
                             <input id="password_confirmation" type="{{ $showConfirmPassword ? 'text' : 'password' }}" placeholder="••••••••" class="@error('password_confirmation') is-invalid @enderror" required style="padding-right: 50px;" wire:model.live.debounce.500ms="password_confirmation">
                             <button class="position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-4 text-muted" type="button" id="togglePasswordBtn" style="height: 100%; display: flex; align-items: center; z-index: 10;" aria-label="Toggle Password Visibility">
@@ -260,27 +269,29 @@ new class extends Component
                         @enderror
                     </div>
 
-                    <!-- Action Button -->
-                    <button type="submit" class="fill-btn w-100 border-0" wire:loading.attr="disabled">
-                        <span class="fill-btn-inner" wire:loading.remove wire:target="signup">
-                            <span class="fill-btn-normal">Sign Up</span>
-                            <span class="fill-btn-hover">Sign Up</span>
-                        </span>
-                        <span class="fill-btn-inner" wire:loading wire:target="signup">
-                            <span>Signing Up...</span>
-                        </span>
-                    </button>
+                        <div class="col-12 col-sm-7 text-center mt-4">
+                            <div class="row">
+                                <div class="col-12 col-sm-6">
+                                    <button type="submit" class="fill-btn border-0" wire:loading.attr="disabled">                        
+                                            <span class="fill-btn-inner" wire:loading.remove wire:target="save">
+                                                <span class="fill-btn-normal">Confirm</span>
+                                                <span class="fill-btn-hover">Confirm</span>
+                                            </span>
+
+                                            <span class="fill-btn-inner" wire:loading wire:target="save">
+                                                <span class="fill-btn-normal">Confirming...</span>
+                                                <span class="fill-btn-hover">Confirming...</span>
+                                            </span>
+                                    </button>
+                                </div>   
+                            </div> 
+                       </div>
+
+                    </div>
+
                 </form>
-
-                <!-- Signup Redirect Footer -->
-                <div class="text-center mt-4 small text-muted">
-                        <span>Already have an account? <a href="{{ route('login') }}" class="text-color-1 text-decoration-none fw-bold">Sign in</a></span>
-                </div>
-
-                <div class="text-center mt-4 small text-muted">
-                        <span>Want to register a store? <a href="{{ route('register-store') }}" class="text-color-1 text-decoration-none fw-bold" wire:navigate>Register Store</a></span>
-                </div>
 
             </div>
         </div>
-    </div>
+
+</div>
