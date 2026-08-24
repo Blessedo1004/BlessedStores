@@ -27,8 +27,10 @@ new class extends Component
     ];
 
     public function with(){
-        $stores = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->searchTerm) . '%')->where('user_id', auth()->user()->id)->get();
-        return compact('stores');
+        if($this->searchTerm){
+            $stores = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->searchTerm) . '%')->where('user_id', auth()->user()->id)->get();
+            return compact('stores');
+        }
     }
 
     public function updated($property)
