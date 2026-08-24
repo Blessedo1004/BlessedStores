@@ -28,7 +28,7 @@ new class extends Component
     ];
 
     public function with(){
-        $stores = Store::select(['id','name'])->where('name', 'LIKE', "%{$this->searchTerm}%")->where('user_id', auth()->user()->id)->get();
+        $stores = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->searchTerm) . '%')->where('user_id', auth()->user()->id)->get();
         return compact('stores');
     }
 
@@ -44,7 +44,7 @@ new class extends Component
                 'required',
                 'string',
                 'min:3',
-                'max:20',
+                'max:50',
                 'unique:products,name',
                 'regex:/^[^<>]*$/',
             ],
@@ -70,7 +70,7 @@ new class extends Component
                 'required',
                 'string',
                 'min:10',
-                'max:100',
+                'max:200',
                 'regex:/^[^<>]*$/',
             ],
             'product_images' => [
@@ -100,7 +100,7 @@ new class extends Component
         ]);
 
         // Add the image to the product_images array
-        $this->product_images[] = [$this->image];
+        $this->product_images[] = $this->image;
 
         $this->image = '';
     }

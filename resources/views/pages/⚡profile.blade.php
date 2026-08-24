@@ -33,7 +33,7 @@ new class extends Component
                 'required',
                 'string',
                 'min:3',
-                'max:20',
+                'max:50',
                 'regex:/^[^<>]*$/',
             ],
 

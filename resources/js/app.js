@@ -24,12 +24,77 @@
 
   document.addEventListener('livewire:navigated', function() {
     sideBarNavigation();
+    initializeProductGallery();
   })
  
 
 document.addEventListener('DOMContentLoaded', function() {
   sideBarNavigation();
+  initializeProductGallery();
+
+  const productGalleryObserver = new MutationObserver(function() {
+    initializeProductGallery();
+  });
+
+  productGalleryObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
 });
+
+function initializeProductGallery() {
+  const gallery = document.querySelector('[data-product-gallery]');
+
+  if (!gallery || !window.jQuery) return;
+
+  if (!window.jQuery.fn.slick) return;
+
+  const main = window.jQuery(gallery).find('[data-product-gallery-main]');
+  const previous = window.jQuery(gallery).find('[data-product-gallery-prev]');
+  const next = window.jQuery(gallery).find('[data-product-gallery-next]');
+  const dots = window.jQuery(gallery).find('[data-product-gallery-dots]');
+  const dotButtons = dots.find('[data-product-gallery-dot]');
+
+  if (!main.length || main.hasClass('slick-initialized')) return;
+
+  main.slick({
+    arrows: true,
+    dots: false,
+    adaptiveHeight: true,
+    prevArrow: previous[0],
+    nextArrow: next[0],
+  });
+
+    const updateActiveDot = function(event, slick, currentSlide) {
+      dotButtons.removeClass('is-active').eq(currentSlide).addClass('is-active');
+    };
+
+    main.on('afterChange', updateActiveDot);
+    dotButtons.on('click', function() {
+      main.slick('slickGoTo', Number(window.jQuery(this).data('product-gallery-dot')));
+    });
+    updateActiveDot(null, null, 0);
+}
+
+function registerProductGalleryListeners() {
+  if (!window.Livewire) return;
+
+  const initializeAfterMorph = function() {
+    requestAnimationFrame(function() {
+      requestAnimationFrame(initializeProductGallery);
+    });
+  };
+
+  window.Livewire.on('product-gallery-updated', initializeAfterMorph);
+  window.Livewire.hook('morph.updated', initializeAfterMorph);
+  window.Livewire.hook('morphed', initializeAfterMorph);
+}
+
+if (window.Livewire) {
+  registerProductGalleryListeners();
+} else {
+  document.addEventListener('livewire:init', registerProductGalleryListeners, { once: true });
+}
 
 //Resend code countdown
 window.resendCooldown = function (initialSeconds) {

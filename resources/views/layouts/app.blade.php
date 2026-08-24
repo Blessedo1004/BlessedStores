@@ -14,6 +14,7 @@
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="{{ asset('css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/slick.css') }}">
     
     <!-- Main Project CSS -->
     <link rel="stylesheet" href="{{ asset('css/main.css') }}">
@@ -200,7 +201,8 @@
           {{ $slot }}  
         </main>
     </div>
-     <script src="{{asset('js/jquery-3.6.0.min.js')}}"></script>
+    <script src="{{asset('js/jquery-3.6.0.min.js')}}"></script>
+    <script src="{{asset('js/slick.min.js')}}"></script>
      <script src="{{asset('js/main.js')}}"></script>
     @livewireScripts
 </body>

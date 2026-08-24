@@ -38,7 +38,7 @@ new class extends Component
                 'required',
                 'string',
                 'min:3',
-                'max:20',
+                'max:50',
                 'regex:/^[^<>]*$/',
             ],
 
@@ -70,7 +70,7 @@ new class extends Component
                 'required',
                 'string',
                 'min:10',
-                'max:100',
+                'max:200',
                 'regex:/^[^<>]*$/',
             ],
             'address' => [

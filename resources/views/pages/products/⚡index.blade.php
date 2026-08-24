@@ -12,6 +12,8 @@ new class extends Component
      #[Title('Products')]
      public string $status = '';
      public string $searchTerm = '';
+     public bool $showInfo = false;
+     public ?Product $productInfo = null;
 
      public function with() {
         $query = Product::with('store', 'productImages')
@@ -34,6 +36,23 @@ new class extends Component
         return compact('products', 'count');
      }
 
+     public function showProductInfo($slug){
+        // Authentication check
+        if(!Auth::check()){
+            $this->redirect(route('login'));
+        }
+
+        $this->productInfo = Product::with('productImages')->where('slug' , $slug)->firstOrFail();
+
+        // Authorization check
+        if (!auth()->user()->can('store') || $this->productInfo->user_id !== auth()->id()) {
+            abort(403);
+        }
+        
+        $this->showInfo = true;
+        $this->dispatch('product-gallery-updated');
+    }
+
 
     public function delete($slug){
         // Authentication check
@@ -46,10 +65,10 @@ new class extends Component
             abort(403);
         }
 
-        $store = Store::with('socials')->where('slug', $slug)->firstOrFail();
+        $product = Product::with('productImages')->where('slug', $slug)->firstOrFail();
 
         // Rate limiting
-        $key = 'delete-store:' . $store->id . ':' . request()->ip();
+        $key = 'delete-product:' . $product->id . ':' . request()->ip();
        
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
@@ -64,10 +83,10 @@ new class extends Component
         // Allow five requests every five minutes from each IP address.
         RateLimiter::hit($key, 60 * 5);
 
-        return DB::transaction(function () use ($store){        
-            $store->socials()->delete();
-            $store->delete();
-            session()->flash('success', 'Store deleted successfully!');
+        return DB::transaction(function () use ($product){        
+            $product->productImages()->delete();
+            $product->delete();
+            session()->flash('success', 'Product deleted successfully!');
         });    
 
     }
@@ -176,7 +195,7 @@ new class extends Component
                             </td>
                             <td>
                                 <div class="d-flex flex-column flex-sm-row align-items-center gap-2">
-                                    <button class="btn btn-outline-info btn-sm rounded-pill" wire:click="showStoreInfo(@js($product->slug))" wire:loading.attr="disabled">View Info</button>
+                                    <button class="btn btn-outline-info btn-sm rounded-pill" wire:click="showProductInfo(@js($product->slug))" wire:loading.attr="disabled">View Info</button>
                                     <a href="" class="btn btn-outline-secondary btn-sm rounded-pill" wire:navigate>Edit</a>
                                     <button class="btn btn-outline-danger btn-sm rounded-pill" wire:click="delete(@js($product->slug))" wire:confirm="Are you sure you want to delete this store?? This is a permanent action." wire:loading.attr="disabled">Delete</button>
                                 </div>
@@ -196,43 +215,56 @@ new class extends Component
 
     </div>
 
-    <!-- Store Info Panel -->
-    {{-- <div class="store-info-overlay {{ $showInfo ? '' : 'd-none' }}" wire:loading.class.remove="d-none" wire:target="showStoreInfo" wire:transition>
+    <!-- Product Info Panel -->
+    <div class="store-info-overlay {{ $showInfo ? '' : 'd-none' }}" wire:loading.class.remove="d-none" wire:target="showProductInfo" wire:transition>
         <div class="store-info-panel">
             <div class="store-info-panel-header">
-                <h5 class="store-info-panel-title">Store Information</h5>
+                <h5 class="store-info-panel-title">Product Information</h5>
                 <button type="button" class="store-info-close" wire:click="$set('showInfo', false)" wire:loading.attr="disabled">×</button>
             </div>
             <div class="store-info-panel-body">
                 <div class="store-info-card">
                     @if($showInfo)
+                        <div class="product-info-gallery-cover">
+                            <img src="{{ asset('storage/' . $productInfo->cover_image) }}" alt="{{ $productInfo->name }} cover image">
+                        </div>
+
+                        <div class="product-info-gallery" data-product-gallery wire:ignore.self>
+                            <div class="product-info-carousel">
+                                <button type="button" class="product-gallery-arrow product-gallery-arrow-prev" data-product-gallery-prev aria-label="Previous product image">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                                </button>
+                                <div class="product-info-gallery-main" data-product-gallery-main>
+                                    @foreach($productInfo->productImages as $productImage)
+                                        <div class="product-info-slide">
+                                            <img src="{{ asset('storage/' . $productImage->image) }}" alt="{{ $productInfo->name }} image {{ $loop->iteration }}">
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div class="product-info-gallery-dots" data-product-gallery-dots>
+                                    @foreach($productInfo->productImages as $productImage)
+                                        <button type="button" data-product-gallery-dot="{{ $loop->index }}" aria-label="Show product image {{ $loop->iteration }}"></button>
+                                    @endforeach
+                                </div>
+                                <button type="button" class="product-gallery-arrow product-gallery-arrow-next" data-product-gallery-next aria-label="Next product image">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="store-info-placeholder" wire:transition>
-                            <p><strong>Store Owner:</strong> {{ $storeInfo->user->name }}</p>
-                            <p><strong>Email:</strong> {{ $storeInfo->user->email }}</p>
-                            <p><strong>Store Name:</strong> {{ $storeInfo->name }}</p>
-                            <p><strong>Address:</strong> {{ $storeInfo->address }}</p>
-                            <p><strong>Logo:</strong> 
-                                <img src="{{ asset('storage/' . $storeInfo->logo) }}" alt="Store Logo" class="img-fluid" style="max-height: 100px;">
-                            </p>
-                            <p><strong>Phone Number:</strong> {{ $storeInfo->phone_number }}</p>
-                            <p><strong>Description:</strong> {{ $storeInfo->description }}</p>
-                            <p><strong>Social Media:</strong></p>
-                            <ul>
-                                @foreach($storeInfo->socials as $social)
-                                    <li><h6 class="platform-name">{{ $social->platform }}:</h6> <span class="username">{{ $social->user_name }}</span></li>
-                                @endforeach
-                            </ul>
-                            <p class="mt-2"><strong>Date of Registration:</strong> {{ $storeInfo->created_at->format('M d, Y') }}</p>
-                            <p><strong>Status:</strong> {{ $storeInfo->status }}</p>
+                            <p><strong>Name:</strong> {{ $productInfo->name }}</p>
+                            <p><strong>Quantity:</strong> {{ $productInfo->quantity }}</p>
+                            <p><strong>Price:</strong> {{ $productInfo->price }}</p>
+                            <p><strong>Description:</strong> {{ $productInfo->description }}</p>
+                            <p><strong>Status:</strong> {{ $productInfo->status }}</p>
                         </div>
                     @else
-                        <div class="store-info-loading">
-                            Loading store details...
-                        </div>
+                        <div class="store-info-loading">Loading product details...</div>
                     @endif
                 </div>
             </div>
         </div>
-    </div> --}}
+    </div>
 
 </div>
