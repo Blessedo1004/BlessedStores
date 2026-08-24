@@ -61,7 +61,7 @@ new class extends Component
         }
 
         // Authorization check
-        else if (!auth()->user()->can('admin-or-super-admin')) {
+        else if (!auth()->user()->can('store')) {
             abort(403);
         }
 
@@ -190,13 +190,13 @@ new class extends Component
                             <td>{{Str::limit($product->description, 50) }}</td>
                             <td>
                                 <span class="status-badge {{ $product->status === 'in-stock' ? 'bg-success' : 'bg-danger'}}">
-                                    {{ $product->status }}
+                                    {{ $product->status === "in-stock" ? "In Stock" : "Out of Stock"}}
                                 </span>
                             </td>
                             <td>
                                 <div class="d-flex flex-column flex-sm-row align-items-center gap-2">
                                     <button class="btn btn-outline-info btn-sm rounded-pill" wire:click="showProductInfo(@js($product->slug))" wire:loading.attr="disabled">View Info</button>
-                                    <a href="" class="btn btn-outline-secondary btn-sm rounded-pill" wire:navigate>Edit</a>
+                                    <a href="{{ route('products.edit'  , $product->slug) }}" class="btn btn-outline-secondary btn-sm rounded-pill" wire:navigate>Edit</a>
                                     <button class="btn btn-outline-danger btn-sm rounded-pill" wire:click="delete(@js($product->slug))" wire:confirm="Are you sure you want to delete this store?? This is a permanent action." wire:loading.attr="disabled">Delete</button>
                                 </div>
                             </td>
@@ -225,10 +225,6 @@ new class extends Component
             <div class="store-info-panel-body">
                 <div class="store-info-card">
                     @if($showInfo)
-                        <div class="product-info-gallery-cover">
-                            <img src="{{ asset('storage/' . $productInfo->cover_image) }}" alt="{{ $productInfo->name }} cover image">
-                        </div>
-
                         <div class="product-info-gallery" data-product-gallery wire:ignore.self>
                             <div class="product-info-carousel">
                                 <button type="button" class="product-gallery-arrow product-gallery-arrow-prev" data-product-gallery-prev aria-label="Previous product image">
@@ -257,7 +253,9 @@ new class extends Component
                             <p><strong>Quantity:</strong> {{ $productInfo->quantity }}</p>
                             <p><strong>Price:</strong> {{ $productInfo->price }}</p>
                             <p><strong>Description:</strong> {{ $productInfo->description }}</p>
-                            <p><strong>Status:</strong> {{ $productInfo->status }}</p>
+                            <p class="mt-4"><strong>Status:</strong> 
+                                <span class="status-badge {{ $product->status === 'in-stock' ? 'bg-success' : 'bg-danger'}}">{{ $productInfo->status === "in-stock" ? "In Stock" : "Out of Stock"}}</span>
+                            </p>
                         </div>
                     @else
                         <div class="store-info-loading">Loading product details...</div>

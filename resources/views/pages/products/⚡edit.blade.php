@@ -3,33 +3,50 @@
 use Livewire\Component;
 use Livewire\Attributes\Title;
 use Livewire\WithFileUploads;
-use App\Models\Store;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Product;
+use App\Models\Store;
 use App\Models\ProductImage;
 use Illuminate\Support\Facades\DB;
 
 new class extends Component
 {
     use WithFileUploads;
-    #[Title('Add a Product')]
+    #[Title('Edit Product')]
 
+    public Product $product;
     public string $name = '';
     public int $quantity;
     public string $price = '';
-    public string $description = '';
-    public $image;
+    public string $description ;
     public array $product_images = [];
+    public $image;
     public string $searchTerm ='';
-    public ?int $store_id = null;
+    public ?int $store_id;
+    
 
-    protected $messages = [
-        'store_id.required' => 'Please select a store from the search results.',
-    ];
+    public function mount($slug){
+        $product = Product::with('store', 'productImages')->where('slug', $slug)->firstOrFail();
+        $this->product = $product;
+        $this->quantity = $product->quantity;
+        $this->price = $product->price;
+        $this->description = $product->description;
+        $this->searchTerm = $product->store->name;
+        $this->store_id = $product->store_id;
+        $product_images = $product->productImages;
+        foreach ($product_images as $image) {
+            $this->product_images[] = $image;
+        }
+    }
 
     public function with(){
         $stores = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->searchTerm) . '%')->where('user_id', auth()->user()->id)->get();
         return compact('stores');
     }
+
+    protected $messages = [
+        'store_id.required' => 'Please select a store from the search results.',
+    ];
 
     public function updated($property)
     {
@@ -40,7 +57,7 @@ new class extends Component
     {
         return [
             'name' => [
-                'required',
+                'nullable',
                 'string',
                 'min:3',
                 'max:50',
@@ -51,7 +68,6 @@ new class extends Component
             'quantity' => [
                 'required',
                 'integer',
-                'min:1',
                 'regex:/^[^<>]*$/',
             ],
             'price' => [
@@ -119,19 +135,19 @@ new class extends Component
         }
 
         // Authorization check
-        else if (!auth()->user()->can('store')) {
+        else if (!auth()->user()->can('store') || $this->product->user_id !== auth()->user()->id ) {
             abort(403);
         }
 
         // Rate limiting 
         $user = auth()->user();
-        $key = 'create-product:' . $user->id . ':' . request()->ip();
+        $key = 'update-product:' . $user->id . ':' . request()->ip();
        
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
 
             $this->addError(
-                'create',
+                'update',
                 "Too many attempts. Please wait {$seconds} seconds before trying again."
             );
         return;
@@ -144,22 +160,38 @@ new class extends Component
         $this->validate($this->rules(), $this->messages);
 
         return DB::transaction(function () {
-            $product = new Product();
-            $product->name = $this->name;
-            $product->price = $this->price;
-            $product->quantity = $this->quantity;
-            $product->description = $this->description;
-            $product->store_id = $this->store_id;
-            $product->save();
+            if (filled($this->name)) {
+                $this->product->name = $this->name;
+            }
+            $this->product->price = $this->price;
+            $this->product->quantity = $this->quantity;
+            if($this->product->quantity < 1){
+                $this->product->status = "out-of-stock";
+            }
+            $this->product->description = $this->description;
+            $this->product->store_id = $this->store_id;
+
+            $existingImageIds = collect($this->product_images)
+                ->filter(fn ($productImage) => $productImage instanceof ProductImage)
+                ->pluck('id');
+
+            $this->product->productImages()
+                ->when($existingImageIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $existingImageIds))
+                ->delete();
 
             foreach ($this->product_images as $product_image) {
+                if ($product_image instanceof ProductImage) {
+                    continue;
+                }
+
                 $image = new ProductImage();
-                $image->product_id = $product->id;
+                $image->product_id = $this->product->id;
                 $path = $product_image->store('product-images','public');
                 $image->image = $path;
                 $image->save();
             }
-            session()->flash('success','Product added successfully');
+            $this->product->save();
+            session()->flash('success','Product updated successfully');
             return $this->redirect(route('products'), navigate:true);
         });
     }
@@ -169,7 +201,7 @@ new class extends Component
 <div class="dashboard-content">
         @php
             $rateLimitErrors = collect($errors->messages())
-                ->except(['name', 'quantity', 'price','description', 'product_images', 'image', 'store_id'])
+                ->except(['name', 'quantity', 'price','description', 'product_images','image', 'store_id'])
                 ->flatten();
         @endphp 
         
@@ -186,8 +218,7 @@ new class extends Component
             @endforeach
         @endif
         <div class="mb-4">
-            <h5 class="fw-bold text-dark mb-1">Add New Product</h5>
-            <p class="text-muted small mb-0">Provide product details to create a new product.</p>
+            <h5 class="fw-bold text-dark mb-1">Update Product</h5>
         </div>
 
         <div class="card border-0 shadow-sm rounded-4">
@@ -199,7 +230,7 @@ new class extends Component
                     <div class="row g-3 justify-content-center">
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Name</label>
-                            <input type="text" placeholder="Louis Vitton shirt" required wire:model.live.debounce.500ms="name">
+                            <input type="text" placeholder="Leave empty if you want it unchanged" required wire:model.live.debounce.500ms="name">
                             @error('name')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
@@ -282,7 +313,7 @@ new class extends Component
                                     @foreach ($product_images as $product_image)
 
                                         <div class="product-image-preview" wire:key="image-{{ $loop->index }}" wire:transition>
-                                            <img src="{{ $product_image->temporaryUrl() }}" alt="Product image {{ $loop->iteration }} preview">
+                                            <img src="{{ method_exists($product_image, 'temporaryUrl') ? $product_image->temporaryUrl() : asset('storage/' . $product_image->image) }}" alt="Product image {{ $loop->iteration }} preview">
                                             <button type="button" class="product-image-remove" aria-label="Remove product image {{ $loop->iteration }}" wire:click="removeProductImage({{ $loop->index }})" wire:loading.attr="disabled">
                                                 <span wire:loading.remove wire:target="removeProductImage({{ $loop->index }})">&times;</span>
                                                 <span wire:loading wire:target="removeProductImage({{ $loop->index }})">...</span>
@@ -300,13 +331,13 @@ new class extends Component
                                 <div class="col-12 col-sm-6">
                                     <button type="submit" class="fill-btn border-0">                        
                                             <span class="fill-btn-inner" wire:loading.remove wire:target="save">
-                                                <span class="fill-btn-normal">Add Product</span>
-                                                <span class="fill-btn-hover">Add Product</span>
+                                                <span class="fill-btn-normal">Update Product</span>
+                                                <span class="fill-btn-hover">Update Product</span>
                                             </span>
 
                                             <span class="fill-btn-inner" wire:loading wire:target="save">
-                                                <span class="fill-btn-normal">Adding</span>
-                                                <span class="fill-btn-hover">Adding</span>
+                                                <span class="fill-btn-normal">Updating</span>
+                                                <span class="fill-btn-hover">Updating</span>
                                             </span>
                                     </button>
                                 </div>

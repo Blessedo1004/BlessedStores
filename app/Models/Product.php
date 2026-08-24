@@ -9,7 +9,7 @@ use App\Traits\FilterByUser;
 class Product extends Model
 {
     use FilterByUser;
-    protected $fillable = ['store_id','user_id', 'name', 'quantity', 'price', 'slug', 'description','cover_image', 'status'];
+    protected $fillable = ['store_id','user_id', 'name', 'quantity', 'price', 'slug', 'description', 'status'];
 
     public function store(){
         return $this->belongsTo(Store::class);
