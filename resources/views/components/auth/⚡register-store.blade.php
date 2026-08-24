@@ -314,7 +314,7 @@ new class extends Component
 
                             <div class="mb-3">
                                 <div id="social-badges" class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
-                                    @foreach ($this->social_media as $social)
+                                    @foreach ($social_media as $social)
                                         <div class="social-badge" wire:key="social-{{ $loop->index }}" wire:transition>
                                             <div class="platform">
                                                 <div class="platform-name">{{ $social['platform'] }}</div>

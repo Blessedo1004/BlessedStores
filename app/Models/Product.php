@@ -4,36 +4,37 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use App\Traits\FilterByUser;
 
-
-class Store extends Model
+class Product extends Model
 {
-    protected $fillable = ['user_id', 'name', 'phone_number', 'logo', 'slug', 'description', 'address'];
-    
-    public function socials(){
-        return $this->hasMany(Social::class);
-    }
+    use FilterByUser;
+    protected $fillable = ['store_id','user_id', 'name', 'quantity', 'price', 'slug', 'description','cover_image', 'status'];
 
+    public function store(){
+        return $this->belongsTo(Store::class);
+    }
+    
     public function user(){
         return $this->belongsTo(User::class);
     }
 
-    public function products(){
-        return $this->hasMany(Product::class);
+    public function productImages(){
+        return $this->hasMany(ProductImage::class);
     }
 
     //create slug
     protected static function booted(): void
     {
-        static::creating(function (Store $store) {
-            $store->slug = static::generateUniqueSlug($store->name);
+        static::creating(function (Product $product) {
+            $product->slug = static::generateUniqueSlug($product->name);
         });
 
-        static::updating(function (Store $store) {
-            if ($store->isDirty('name')) {
-                $store->slug = static::generateUniqueSlug(
-                    $store->name,
-                    $store->id
+        static::updating(function (Product $product) {
+            if ($product->isDirty('name')) {
+                $product->slug = static::generateUniqueSlug(
+                    $product->name,
+                    $product->id
                 );
             }
         });
@@ -64,5 +65,5 @@ class Store extends Model
         }
 
         return $slug;
-    }  
+    } 
 }

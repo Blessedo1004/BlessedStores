@@ -48,12 +48,16 @@ class User extends Authenticatable
         );
     }
 
-    public function store(){
-        return $this->hasOne(Store::class);
+    public function stores(){
+        return $this->hasMany(Store::class);
     }
 
     public function storeApplications()
     {
         return $this->hasMany(StoreApplication::class, 'reviewed_by');
+    }
+
+    public function products(){
+        return $this->hasMany(Product::class);
     }
 }

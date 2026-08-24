@@ -35,7 +35,7 @@ class StoreApplication extends Model
         static::updating(function (StoreApplication $store) {
             if ($store->isDirty('store_name')) {
                 $store->slug = static::generateUniqueSlug(
-                    $store->name,
+                    $store->store_name,
                     $store->id
                 );
             }
