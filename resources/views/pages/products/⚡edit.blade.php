@@ -102,7 +102,7 @@ new class extends Component
     public function addProductImage()
     {
         if (count($this->product_images) >= 5) {
-            $this->addError('social_media', 'You may only add up to 5 product images.');
+            $this->addError('product_images', 'You may only add up to 5 product images.');
             return;
         }
 
