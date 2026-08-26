@@ -281,7 +281,7 @@ select:focus,
   gap: 5px;
 }
 
-.fill-btn-red::before {
+/* .fill-btn-red::before {
     content: "";
     height: 450px;
     width: 200%;
@@ -291,7 +291,7 @@ select:focus,
     left: 50%;
     transform: translateX(-50%);
     transition: 0.5s;
-}
+} */
 
 .fill-btn-red i {
     color: #ffffff;
@@ -443,8 +443,6 @@ select:focus,
     border-radius: 12px;
     background: #fff;
     box-shadow: var(--card-shadow);
-    max-height: 20vh;
-    overflow-y: auto;
 }
 
 .store-search-results-header {
@@ -458,6 +456,11 @@ select:focus,
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+}
+
+.store-search-results-body{
+    max-height: 20vh;
+    overflow-y: auto;
 }
 
 .store-search-results-status {
@@ -501,9 +504,15 @@ select:focus,
 }
 
 .status-badge{
+    display: inline-block;
     border-radius: 10px;
-    padding: 8px 5px;
-    color:white;
+    padding: 8px 10px;
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-align: center;
 }
 
 /* Chart card placeholders */

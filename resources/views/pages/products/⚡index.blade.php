@@ -13,6 +13,8 @@ new class extends Component
      public string $status = '';
      public string $searchTerm = '';
      public bool $showInfo = false;
+    public bool $isLoadingInfo = false;
+    public ?string $currentShowSlug = null;
      public ?Product $productInfo = null;
 
      public function with() {
@@ -42,14 +44,27 @@ new class extends Component
             $this->redirect(route('login'));
         }
 
-        $this->productInfo = Product::with('productImages')->where('slug' , $slug)->firstOrFail();
+        if ($this->isLoadingInfo && $this->currentShowSlug !== $slug) {
+            return;
+        }
+
+        $this->isLoadingInfo = true;
+        $this->currentShowSlug = $slug;
+
+        $product = Product::with('productImages')->where('slug' , $slug)->firstOrFail();
+
+        if ($this->currentShowSlug !== $slug) {
+            return;
+        }
 
         // Authorization check
-        if (!auth()->user()->can('store') || $this->productInfo->user_id !== auth()->id()) {
+        if (!auth()->user()->can('store') || $product->user_id !== auth()->id()) {
             abort(403);
         }
         
+        $this->productInfo = $product;
         $this->showInfo = true;
+        $this->isLoadingInfo = false;
         $this->dispatch('product-gallery-updated');
     }
 
@@ -195,9 +210,9 @@ new class extends Component
                             </td>
                             <td>
                                 <div class="d-flex flex-column flex-sm-row align-items-center gap-2">
-                                    <button class="btn btn-outline-info btn-sm rounded-pill" wire:click="showProductInfo(@js($product->slug))" wire:loading.attr="disabled">View Info</button>
+                                    <button class="btn btn-outline-info btn-sm rounded-pill" wire:click="showProductInfo(@js($product->slug))" wire:loading.attr="disabled" @disabled($isLoadingInfo)>View Info</button>
                                     <a href="{{ route('products.edit'  , $product->slug) }}" class="btn btn-outline-secondary btn-sm rounded-pill" wire:navigate>Edit</a>
-                                    <button class="btn btn-outline-danger btn-sm rounded-pill" wire:click="delete(@js($product->slug))" wire:confirm="Are you sure you want to delete this store?? This is a permanent action." wire:loading.attr="disabled">Delete</button>
+                                    <button class="btn btn-outline-danger btn-sm rounded-pill" wire:click="delete(@js($product->slug))" wire:confirm="Are you sure you want to delete this product?? This is a permanent action." wire:loading.attr="disabled">Delete</button>
                                 </div>
                             </td>
                             </tr>  
@@ -220,7 +235,7 @@ new class extends Component
         <div class="store-info-panel">
             <div class="store-info-panel-header">
                 <h5 class="store-info-panel-title">Product Information</h5>
-                <button type="button" class="store-info-close" wire:click="$set('showInfo', false)" wire:loading.attr="disabled">×</button>
+                <button type="button" class="store-info-close" wire:click="$set('showInfo', false); $set('currentShowSlug', null)" wire:loading.attr="disabled">×</button>
             </div>
             <div class="store-info-panel-body">
                 <div class="store-info-card">

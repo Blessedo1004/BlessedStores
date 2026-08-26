@@ -9,7 +9,7 @@ use App\Traits\FilterByUser;
 class Product extends Model
 {
     use FilterByUser;
-    protected $fillable = ['store_id','user_id', 'name', 'quantity', 'price', 'slug', 'description', 'status'];
+    protected $fillable = ['store_id','user_id', 'name', 'quantity', 'price', 'slug', 'description', 'status', 'weight', 'sku', 'brand_id'];
 
     public function store(){
         return $this->belongsTo(Store::class);
@@ -21,6 +21,14 @@ class Product extends Model
 
     public function productImages(){
         return $this->hasMany(ProductImage::class);
+    }
+
+    public function categories(){
+        return $this->belongsToMany(Category::class);
+    }
+
+    public function brand(){
+        return $this->belongsTo(Brand::class);
     }
 
     //create slug

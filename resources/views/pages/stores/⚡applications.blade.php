@@ -22,7 +22,7 @@ new class extends Component
      public string $searchTerm = '';
      public ?StoreApplication $storeInfo = null;
      public ?string $currentShowSlug = null;
-     public bool $isShowingApplication = false;
+    public bool $isLoadingInfo = false;
      public bool $showRejectionReason = false;
      #[Validate('required|string|min:10|max:255')]
      public string $rejection_reason = '';
@@ -60,11 +60,11 @@ new class extends Component
             abort(403);
         }
 
-        if ($this->isShowingApplication && $this->currentShowSlug !== $slug) {
+        if ($this->isLoadingInfo && $this->currentShowSlug !== $slug) {
             return;
         }
 
-        $this->isShowingApplication = true;
+        $this->isLoadingInfo = true;
         $this->currentShowSlug = $slug;
 
         $store = StoreApplication::with('applicationSocials')->where('slug', $slug)->firstOrFail();
@@ -74,14 +74,14 @@ new class extends Component
         }
 
         $this->storeInfo = $store;
-        $this->isShowingApplication = false;
+        $this->isLoadingInfo = false;
     }
 
     public function closeApplicationInfo()
     {
         $this->storeInfo = null;
         $this->currentShowSlug = null;
-        $this->isShowingApplication = false;
+        $this->isLoadingInfo = false;
         if ($this->rejection_reason) {
            $this->rejection_reason = false;
         }
@@ -151,7 +151,7 @@ new class extends Component
 
             $this->storeInfo = null;
             $this->currentShowSlug = null;
-            $this->isShowingApplication = false;
+            $this->isLoadingInfo = false;
             if ($this->rejection_reason) {
                $this->rejection_reason = '';
             }
@@ -202,7 +202,7 @@ new class extends Component
 
             $this->storeInfo = null;
             $this->currentShowSlug = null;
-            $this->isShowingApplication = false;
+            $this->isLoadingInfo = false;
             $this->showRejectionReason = false;
             if ($this->rejection_reason) {
                $this->rejection_reason = '';
@@ -323,7 +323,7 @@ new class extends Component
                             </td>
                             <td>
                                 <div class="d-flex flex-column flex-sm-row align-items-center gap-2">
-                                    <button class="btn btn-outline-info btn-sm rounded-pill" wire:click="showApplicationInfo(@js($store->slug))" wire:loading.attr="disabled" @disabled($isShowingApplication)>View Info</button>
+                                    <button class="btn btn-outline-info btn-sm rounded-pill" wire:click="showApplicationInfo(@js($store->slug))" wire:loading.attr="disabled" @disabled($isLoadingInfo)>View Info</button>
                                 </div>
                             </td>
                             </tr>  

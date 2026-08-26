@@ -21,16 +21,21 @@ new class extends Component
     public array $product_images = [];
     public string $searchTerm ='';
     public ?int $store_id = null;
+    public int $loadAmount = 3;
 
     protected $messages = [
         'store_id.required' => 'Please select a store from the search results.',
     ];
 
     public function with(){
-        if($this->searchTerm){
-            $stores = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->searchTerm) . '%')->where('user_id', auth()->user()->id)->get();
+        if(filled($this->searchTerm)){
+            $stores = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->searchTerm) . '%')->where('user_id', auth()->user()->id)->take($this->loadAmount)->get();
             return compact('stores');
         }
+    }
+
+    public function loadMore(){
+        $this->loadAmount+=3;
     }
 
     public function updated($property)
@@ -232,22 +237,30 @@ new class extends Component
                                     <span>Store search results</span>
                                     <span class="store-search-results-status" wire:loading wire:target="searchTerm">Searching...</span>
                                 </div>
-                                @if(!$searchTerm)
-                                    <div class="store-search-results-empty" wire:loading.remove wire:target="searchTerm">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
-                                        </svg>
-                                        <span>Matching stores will appear here.</span>
-                                    </div>
+                                <div class="store-search-results-body">
+                                    @if(!filled($searchTerm))
+                                        <div class="store-search-results-empty" wire:loading.remove wire:target="searchTerm">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+                                            </svg>
+                                            <span>Matching stores will appear here.</span>
+                                        </div>
 
-                                    @else
-                                    @forelse ($stores as $store)
-                                        <p class="store-search-result" wire:key="store-search-result-{{ $store->id }}" wire:click="setStore({{ $store->id }})" wire:loading.attr="disabled">{{ $store->name }}</p>
-                                         
-                                        @empty
-                                        <p class="text-muted text-center py-4">{{ "No results found for '{$searchTerm}'" }}</p>
-                                    @endforelse
-                                @endif
+                                        @else
+                                        @forelse ($stores as $store)
+                                            <p class="store-search-result" wire:key="store-search-result-{{ $store->id }}" wire:click="setStore({{ $store->id }})" wire:loading.attr="disabled">{{ $store->name }}</p>
+                                            @if($loadAmount < count($stores))
+                                                <p class="text-center" wire:click="loadMore" wire:loading.attr="disabled">
+                                                    <span wire:loading.remove wire:target="loadMore">Load More</span>
+                                                    <span wire:loading wire:target="loadMore">Loading...</span>
+                                                </p> 
+                                            @endif
+                                           
+                                            @empty
+                                            <p class="text-muted text-center py-4">{{ "No results found for '{$searchTerm}'" }}</p>
+                                        @endforelse
+                                    @endif
+                                </div>
 
 
                             </div>
@@ -313,7 +326,7 @@ new class extends Component
                                     </button>
                                 </div>
                                 <div class="col-12 col-sm-6 mt-4 mt-sm-0">
-                                    <a href="{{ route('products') }}" class="fill-btn-red">
+                                    <a href="{{ route('products') }}" class="fill-btn-red" wire:navigate>
                                         <span class="fill-btn-inner">
                                             <span class="fill-btn-normal">Cancel</span>
                                             <span class="fill-btn-hover">Cancel</span>
