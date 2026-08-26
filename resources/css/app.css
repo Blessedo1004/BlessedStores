@@ -515,6 +515,10 @@ select:focus,
     text-align: center;
 }
 
+.load-more{
+    cursor:pointer;
+}
+
 /* Chart card placeholders */
 .chart-card {
     background: #ffffff;

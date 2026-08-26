@@ -5,6 +5,8 @@ use Livewire\Attributes\Title;
 use Livewire\WithFileUploads;
 use App\Models\Store;
 use App\Models\Product;
+use App\Models\Category;
+use App\Models\Brand;
 use App\Models\ProductImage;
 use Illuminate\Support\Facades\DB;
 
@@ -17,25 +19,68 @@ new class extends Component
     public int $quantity;
     public string $price = '';
     public string $description = '';
+    public string $sku='';
+    public string $weight = '';
     public $image;
     public array $product_images = [];
-    public string $searchTerm ='';
+    public string $storeTerm ='';
     public ?int $store_id = null;
-    public int $loadAmount = 3;
+    public string $categoryTerm ='';
+    public array $selectedCategories = [];
+    public array $selectedCategoryTerms = [];
+    public string $brandTerm ='';
+    public ?int $brand_id = null;
+    public int $storeLoadAmount = 3;
+    public int $categoryLoadAmount = 3;
+    public int $brandLoadAmount = 3;
 
     protected $messages = [
         'store_id.required' => 'Please select a store from the search results.',
     ];
 
     public function with(){
-        if(filled($this->searchTerm)){
-            $stores = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->searchTerm) . '%')->where('user_id', auth()->user()->id)->take($this->loadAmount)->get();
-            return compact('stores');
+        $stores = collect();
+        $storesTotal = 0;
+        $categories = collect();
+        $categoriesTotal = 0;
+        $brands = collect();
+        $brandsTotal = 0;
+
+        if(filled($this->storeTerm)){
+            $query = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->storeTerm) . '%')->where('user_id', auth()->user()->id);
+            $storesTotal = $query->count();
+            $stores = $query->take($this->storeLoadAmount)->get();
         }
+
+        if(filled($this->categoryTerm)){
+            $query = Category::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->categoryTerm) . '%');
+            $categoriesTotal = $query->count();
+            $categories = $query->take($this->categoryLoadAmount)->get();
+        }
+
+         if(filled($this->brandTerm)){
+            $query = Brand::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->brandTerm) . '%');
+            $brandsTotal = $query->count();
+            $brands = $query->take($this->brandLoadAmount)->get();
+        }
+
+        return compact(
+            'stores', 'storesTotal',
+            'categories', 'categoriesTotal',
+            'brands', 'brandsTotal'
+        );
     }
 
-    public function loadMore(){
-        $this->loadAmount+=3;
+    public function loadMoreStores(){
+        $this->storeLoadAmount+=3;
+    }
+
+    public function loadMoreCategories(){
+        $this->categoryLoadAmount+=3;
+    }
+
+    public function loadMoreBrands(){
+        $this->brandLoadAmount+=3;
     }
 
     public function updated($property)
@@ -67,6 +112,19 @@ new class extends Component
                 'decimal:0,2',
                 'regex:/^[^<>]*$/',
             ],
+            'weight' => [
+                'nullable',
+                'min:0.01',
+                'decimal:0,2',
+                'regex:/^[^<>]*$/',
+            ],
+            'sku' => [
+                'required',
+                'string',
+                'max:100',
+                'unique:products,sku',
+                'regex:/^[^<>]*$/',
+            ],
             'description' => [
                 'required',
                 'string',
@@ -84,7 +142,15 @@ new class extends Component
                 'required',
                 'integer'
             ],
-
+            'selectedCategories' => [
+                'required',
+                'array',
+                'min:1'
+            ],
+            'brand_id' => [
+                'nullable',
+                'integer'
+            ],
     ];
     }
 
@@ -116,7 +182,27 @@ new class extends Component
 
     public function setStore(Store $store){
         $this->store_id = $store->id;
-        $this->searchTerm = $store->name;
+        $this->storeTerm = $store->name;
+    }
+
+     public function setCategory(Category $category){
+        if (!in_array($category->id, $this->selectedCategories, true)) {
+            $this->selectedCategories[] = $category->id;
+            $this->selectedCategoryTerms[] = $category->name;
+        }
+        $this->categoryTerm = '';
+    }
+
+    public function removeCategory($index)
+    {
+        unset($this->selectedCategories[$index], $this->selectedCategoryTerms[$index]);
+        $this->selectedCategories = array_values($this->selectedCategories);
+        $this->selectedCategoryTerms = array_values($this->selectedCategoryTerms);
+    }
+
+    public function setBrand(Brand $brand){
+        $this->brand_id = $brand->id;
+        $this->brandTerm = $brand->name;
     }
 
     public function save(){
@@ -157,7 +243,15 @@ new class extends Component
             $product->quantity = $this->quantity;
             $product->description = $this->description;
             $product->store_id = $this->store_id;
+            if($this->brand_id){
+                $product->brand_id = $this->brand_id;   
+            }
+            if(filled($this->weight)){
+                $product->weight = $this->weight;   
+            }
+            $product->sku = $this->sku;
             $product->save();
+            $product->categories()->attach($this->selectedCategories);
 
             foreach ($this->product_images as $product_image) {
                 $image = new ProductImage();
@@ -176,7 +270,7 @@ new class extends Component
 <div class="dashboard-content">
         @php
             $rateLimitErrors = collect($errors->messages())
-                ->except(['name', 'quantity', 'price','description', 'product_images', 'image', 'store_id'])
+                ->except(['name', 'quantity', 'price','description', 'product_images', 'image', 'store_id', 'selectedCategories', 'brand_id', 'sku', 'weight'])
                 ->flatten();
         @endphp 
         
@@ -229,17 +323,33 @@ new class extends Component
                         </div>
 
                         <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold text-dark small mb-2">Weight(kg)</label>
+                            <input type="number" placeholder="not required" wire:model.live.debounce.500ms="weight" min="0" step="0.01" inputmode="numeric">
+                            @error('weight')
+                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold text-dark small mb-2">SKU</label>
+                            <input type="text" placeholder="SKU123" required wire:model.live.debounce.500ms="sku">
+                            @error('sku')
+                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Store</label>
-                            <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search store" wire:model.live.debounce.500ms="searchTerm" inputmode="search">
+                            <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search store" wire:model.live.debounce.500ms="storeTerm" inputmode="search">
 
                             <div class="store-search-results" aria-live="polite">
                                 <div class="store-search-results-header">
                                     <span>Store search results</span>
-                                    <span class="store-search-results-status" wire:loading wire:target="searchTerm">Searching...</span>
+                                    <span class="store-search-results-status" wire:loading wire:target="storeTerm">Searching...</span>
                                 </div>
                                 <div class="store-search-results-body">
-                                    @if(!filled($searchTerm))
-                                        <div class="store-search-results-empty" wire:loading.remove wire:target="searchTerm">
+                                    @if(!filled($storeTerm))
+                                        <div class="store-search-results-empty" wire:loading.remove wire:target="storeTerm">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
                                             </svg>
@@ -249,16 +359,15 @@ new class extends Component
                                         @else
                                         @forelse ($stores as $store)
                                             <p class="store-search-result" wire:key="store-search-result-{{ $store->id }}" wire:click="setStore({{ $store->id }})" wire:loading.attr="disabled">{{ $store->name }}</p>
-                                            @if($loadAmount < count($stores))
-                                                <p class="text-center" wire:click="loadMore" wire:loading.attr="disabled">
-                                                    <span wire:loading.remove wire:target="loadMore">Load More</span>
-                                                    <span wire:loading wire:target="loadMore">Loading...</span>
-                                                </p> 
-                                            @endif
-                                           
                                             @empty
-                                            <p class="text-muted text-center py-4">{{ "No results found for '{$searchTerm}'" }}</p>
+                                            <p class="text-muted text-center py-4">{{ "No results found for '{$storeTerm}'" }}</p>
                                         @endforelse
+                                        @if($storeLoadAmount < $storesTotal)
+                                            <p class="text-center load-more" wire:click="loadMoreStores" wire:loading.attr="disabled">
+                                                <span wire:loading.remove wire:target="loadMoreStores">Load More</span>
+                                                <span wire:loading wire:target="loadMoreStores">Loading...</span>
+                                            </p>
+                                        @endif
                                     @endif
                                 </div>
 
@@ -266,6 +375,103 @@ new class extends Component
                             </div>
 
                             @error('store_id')
+                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold text-dark small mb-2">Category</label>
+                            <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search category" wire:model.live.debounce.500ms="categoryTerm" inputmode="search">
+
+                            <div class="store-search-results" aria-live="polite">
+                                <div class="store-search-results-header">
+                                    <span>Category search results</span>
+                                    <span class="store-search-results-status" wire:loading wire:target="categoryTerm">Searching...</span>
+                                </div>
+                                <div class="store-search-results-body">
+                                    @if(!filled($categoryTerm))
+                                        <div class="store-search-results-empty" wire:loading.remove wire:target="categoryTerm">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+                                            </svg>
+                                            <span>Matching categories will appear here.</span>
+                                        </div>
+
+                                        @else
+                                        @forelse ($categories as $category)
+                                            <p class="store-search-result" wire:key="category-search-result-{{ $category->id }}" wire:click="setCategory({{ $category->id }})" wire:loading.attr="disabled">{{ $category->name }}</p>
+                                            @empty
+                                            <p class="text-muted text-center py-4">{{ "No results found for '{$categoryTerm}'" }}</p>
+                                        @endforelse
+                                        @if($categoryLoadAmount < $categoriesTotal)
+                                            <p class="text-center load-more" wire:click="loadMoreCategories" wire:loading.attr="disabled">
+                                                <span wire:loading.remove wire:target="loadMoreCategories">Load More</span>
+                                                <span wire:loading wire:target="loadMoreCategories">Loading...</span>
+                                            </p>
+                                        @endif
+                                    @endif
+                                </div>
+
+
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
+                                @foreach ($selectedCategoryTerms as $categoryTermValue)
+                                    <div class="social-badge" wire:key="selected-category-{{ $loop->index }}" wire:transition>
+                                        <div class="platform">
+                                            <div class="platform-name">Category</div>
+                                            <div class="username">{{ $categoryTermValue }}</div>
+                                        </div>
+                                        <button type="button" class="remove-btn" aria-label="Remove {{ $categoryTermValue }}" wire:click="removeCategory({{ $loop->index }})" wire:loading.attr="disabled">
+                                            <span wire:loading.remove wire:target="removeCategory({{ $loop->index }})">&times;</span>
+                                            <span wire:loading wire:target="removeCategory({{ $loop->index }})">...</span>
+                                        </button>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            @error('categories')
+                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold text-dark small mb-2">Brand</label>
+                            <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search brand" wire:model.live.debounce.500ms="brandTerm" inputmode="search">
+
+                            <div class="store-search-results" aria-live="polite">
+                                <div class="store-search-results-header">
+                                    <span>Brand search results</span>
+                                    <span class="store-search-results-status" wire:loading wire:target="brandTerm">Searching...</span>
+                                </div>
+                                <div class="store-search-results-body">
+                                    @if(!filled($brandTerm))
+                                        <div class="store-search-results-empty" wire:loading.remove wire:target="brandTerm">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+                                            </svg>
+                                            <span>Matching brands will appear here.</span>
+                                        </div>
+
+                                        @else
+                                        @forelse ($brands as $brand)
+                                            <p class="store-search-result" wire:key="brand-search-result-{{ $brand->id }}" wire:click="setBrand({{ $brand->id }})" wire:loading.attr="disabled">{{ $brand->name }}</p>
+                                            @empty
+                                            <p class="text-muted text-center py-4">{{ "No results found for '{$brandTerm}'" }}</p>
+                                        @endforelse
+                                        @if($brandLoadAmount < $brandsTotal)
+                                            <p class="text-center load-more" wire:click="loadMoreBrands" wire:loading.attr="disabled">
+                                                <span wire:loading.remove wire:target="loadMoreBrands">Load More</span>
+                                                <span wire:loading wire:target="loadMoreBrands">Loading...</span>
+                                            </p>
+                                        @endif
+                                    @endif
+                                </div>
+
+
+                            </div>
+
+                            @error('brand_id')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
                         </div>
@@ -320,8 +526,8 @@ new class extends Component
                                             </span>
 
                                             <span class="fill-btn-inner" wire:loading wire:target="save">
-                                                <span class="fill-btn-normal">Adding</span>
-                                                <span class="fill-btn-hover">Adding</span>
+                                                <span class="fill-btn-normal">Adding...</span>
+                                                <span class="fill-btn-hover">Adding...</span>
                                             </span>
                                     </button>
                                 </div>

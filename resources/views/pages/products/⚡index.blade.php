@@ -201,7 +201,7 @@ new class extends Component
                         <tr wire:key="product-{{ $product->id }}" wire:transition>
                             <td class="fw-semibold text-dark">{{ Str::limit($product->name, 30) }}</td>
                             <td>{{ $product->quantity }}</td>
-                            <td>{{ $product->price }}</td>
+                            <td>₦{{ number_format($product->price, 2) }}</td>
                             <td>{{Str::limit($product->description, 50) }}</td>
                             <td>
                                 <span class="status-badge {{ $product->status === 'in-stock' ? 'bg-success' : 'bg-danger'}}">
@@ -266,10 +266,18 @@ new class extends Component
                         <div class="store-info-placeholder" wire:transition>
                             <p><strong>Name:</strong> {{ $productInfo->name }}</p>
                             <p><strong>Quantity:</strong> {{ $productInfo->quantity }}</p>
-                            <p><strong>Price:</strong> {{ $productInfo->price }}</p>
-                            <p><strong>Description:</strong> {{ $productInfo->description }}</p>
+                            <p><strong>Price:</strong> ₦{{ number_format($productInfo->price, 2) }}</p>
+                            <p><strong>Weight:</strong> {{ $productInfo->weight }}</p>
+                            <p><strong>SKU:</strong> {{ $productInfo->sku }}</p>
+                            <p><strong>Brand:</strong> {{ $productInfo->brand ? $productInfo->brand->name : 'N/A' }}</p>
+                            <p><strong>Categories:</strong> 
+                                @foreach($productInfo->categories as $category)
+                                    <span class="badge bg-secondary">{{ $category->name }}</span>
+                                @endforeach
+                            </p>
+                            <p class="mt-4"><strong>Description:</strong> {{ $productInfo->description }}</p>
                             <p class="mt-4"><strong>Status:</strong> 
-                                <span class="status-badge {{ $product->status === 'in-stock' ? 'bg-success' : 'bg-danger'}}">{{ $productInfo->status === "in-stock" ? "In Stock" : "Out of Stock"}}</span>
+                                <span class="status-badge {{ $productInfo->status === 'in-stock' ? 'bg-success' : 'bg-danger'}}">{{ $productInfo->status === "in-stock" ? "In Stock" : "Out of Stock"}}</span>
                             </p>
                         </div>
                     @else
