@@ -115,16 +115,19 @@ new class extends Component
         RateLimiter::hit($key, 60 * 5);
 
         return DB::transaction(function () {
-            $password = Str::random(8);
-            $user = new User();
-            $user->name = $this->storeInfo->owner_name;
-            $user->email = $this->storeInfo->email;
-            $user->password = Hash::make($password);
-            $user->role = 'store';
-            $user->save();
+            $userExists = User::where('email',$this->storeInfo->email)->firstOrFail();
+            if(!$userExists){
+                $password = Str::random(8);
+                $user = new User();
+                $user->name = $this->storeInfo->owner_name;
+                $user->email = $this->storeInfo->email;
+                $user->password = Hash::make($password);
+                $user->role = 'store';
+                $user->save();
+            }
 
             $storeData = Store::create([
-                'user_id' => $user->id,
+                'user_id' => $userExists ? $userExists->id : $user->id,
                 'name' => $this->storeInfo->store_name,
                 'phone_number' => $this->storeInfo->phone_number,
                 'logo' => $this->storeInfo->logo,
@@ -156,7 +159,12 @@ new class extends Component
                $this->rejection_reason = '';
             }
 
-            Mail::to($email)->send(new StoreRegistrationEmail($password, $owner, $name));
+            if($userExists){
+                Mail::to($email)->send(new StoreRegistrationEmail($owner, $name));
+            }
+            else{
+                Mail::to($email)->send(new StoreRegistrationEmail($password, $owner, $name));
+            }    
             session()->flash('success','Store registered successfully');
         });
     }

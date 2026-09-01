@@ -22,6 +22,7 @@ new class extends Component
     public string $sku='';
     public string $weight = '';
     public $image;
+    public string $visibility='draft';
     public array $product_images = [];
     public string $storeTerm ='';
     public ?int $store_id = null;
@@ -151,6 +152,11 @@ new class extends Component
                 'nullable',
                 'integer'
             ],
+            'visibility' => [
+                'required',
+                'string',
+                'in:draft,published'
+            ],
     ];
     }
 
@@ -250,6 +256,7 @@ new class extends Component
                 $product->weight = $this->weight;   
             }
             $product->sku = $this->sku;
+            $product->visibility = $this->visibility;
             $product->save();
             $product->categories()->attach($this->selectedCategories);
 
@@ -270,7 +277,7 @@ new class extends Component
 <div class="dashboard-content">
         @php
             $rateLimitErrors = collect($errors->messages())
-                ->except(['name', 'quantity', 'price','description', 'product_images', 'image', 'store_id', 'selectedCategories', 'brand_id', 'sku', 'weight'])
+                ->except(['name', 'quantity', 'price','description', 'product_images', 'image', 'store_id', 'selectedCategories', 'brand_id', 'sku', 'weight', 'visibility'])
                 ->flatten();
         @endphp 
         
@@ -363,7 +370,7 @@ new class extends Component
                                             <p class="text-muted text-center py-4">{{ "No results found for '{$storeTerm}'" }}</p>
                                         @endforelse
                                         @if($storeLoadAmount < $storesTotal)
-                                            <p class="text-center load-more" wire:click="loadMoreStores" wire:loading.attr="disabled">
+                                            <p class="text-center load-more mt-4" wire:click="loadMoreStores" wire:loading.attr="disabled">
                                                 <span wire:loading.remove wire:target="loadMoreStores">Load More</span>
                                                 <span wire:loading wire:target="loadMoreStores">Loading...</span>
                                             </p>
@@ -404,7 +411,7 @@ new class extends Component
                                             <p class="text-muted text-center py-4">{{ "No results found for '{$categoryTerm}'" }}</p>
                                         @endforelse
                                         @if($categoryLoadAmount < $categoriesTotal)
-                                            <p class="text-center load-more" wire:click="loadMoreCategories" wire:loading.attr="disabled">
+                                            <p class="text-center load-more mt-4" wire:click="loadMoreCategories" wire:loading.attr="disabled">
                                                 <span wire:loading.remove wire:target="loadMoreCategories">Load More</span>
                                                 <span wire:loading wire:target="loadMoreCategories">Loading...</span>
                                             </p>
@@ -460,7 +467,7 @@ new class extends Component
                                             <p class="text-muted text-center py-4">{{ "No results found for '{$brandTerm}'" }}</p>
                                         @endforelse
                                         @if($brandLoadAmount < $brandsTotal)
-                                            <p class="text-center load-more" wire:click="loadMoreBrands" wire:loading.attr="disabled">
+                                            <p class="text-center load-more mt-4" wire:click="loadMoreBrands" wire:loading.attr="disabled">
                                                 <span wire:loading.remove wire:target="loadMoreBrands">Load More</span>
                                                 <span wire:loading wire:target="loadMoreBrands">Loading...</span>
                                             </p>
@@ -472,6 +479,23 @@ new class extends Component
                             </div>
 
                             @error('brand_id')
+                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold text-dark small mb-2 d-block">Visibility</label>
+                            <div class="d-flex gap-4">
+                                <label class="d-flex align-items-center gap-2">
+                                    <input type="radio" wire:model="visibility" value="draft">
+                                    <span>Draft</span>
+                                </label>
+                                <label class="d-flex align-items-center gap-2">
+                                    <input type="radio" wire:model="visibility" value="published">
+                                    <span>Published</span>
+                                </label>
+                            </div>
+                            @error('visibility')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
                         </div>

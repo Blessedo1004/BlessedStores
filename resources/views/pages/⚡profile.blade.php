@@ -3,6 +3,7 @@
 use Livewire\Component;
 use Livewire\Attributes\Title;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 new class extends Component
@@ -13,7 +14,7 @@ new class extends Component
     public string $name = '';
     public string $email = '';
     public string $status = '';
-
+    public bool $showModal = false;
 
     public function mount(){
         $this->user = auth()->user();
@@ -50,6 +51,14 @@ new class extends Component
     ];
     }
 
+    public function showDeleteAccountModal()
+    {
+        if (!Auth::check()) {
+            return $this->redirect(route('login'));
+        }
+
+        $this->showModal = true;
+    }
 
     public function save(){
         // Authentication check
@@ -152,8 +161,8 @@ new class extends Component
 
 
                         <div class="col-12 col-sm-7 text-center mt-4">
-                            <div class="row">
-                                <div class="col-12 col-sm-6">
+                            <div class="row d-flex justify-content-center">
+                                <div class="col-12 col-sm-6 col-lg-4">
                                     <button type="submit" class="fill-btn border-0" wire:loading.attr="disabled">                        
                                             <span class="fill-btn-inner" wire:loading.remove wire:target="save">
                                                 <span class="fill-btn-normal">Update Profile</span>
@@ -166,14 +175,24 @@ new class extends Component
                                             </span>
                                     </button>
                                 </div>
-                                <div class="col-12 col-sm-6 mt-4 mt-sm-0">
-                                    <a href="{{ route('change-password') }}" class="fill-btn-red" wire:navigate>
+
+                                <div class="col-12 col-sm-6 col-lg-4 mt-4 mt-sm-0">
+                                    <a href="{{ route('change-password') }}" class="fill-btn border-0" wire:navigate>
                                         <span class="fill-btn-inner">
                                             <span class="fill-btn-normal">Change Password</span>
                                             <span class="fill-btn-hover">Change Password</span>
                                         </span>
                                     </a>
-                                </div>    
+                                </div>
+                                
+                                <div class="col-12 col-sm-6 col-lg-4 mt-4 mt-lg-0">
+                                    <button type="button" class="fill-btn-red" wire:click="showDeleteAccountModal" wire:confirm="Are you sure you want to delete your account?? This is a permanent action.">
+                                        <span class="fill-btn-inner">
+                                            <span class="fill-btn-normal">Delete Account</span>
+                                            <span class="fill-btn-hover">Delete Account</span>
+                                        </span>
+                                    </button>
+                                </div>
                             </div> 
                        </div>
    
@@ -188,5 +207,24 @@ new class extends Component
 
             </div>
         </div>
+
+    <div class="store-info-overlay {{ $showModal ? '' : 'd-none' }}" wire:loading.class.remove="d-none" wire:target="showDeleteAccountModal" wire:transition>
+        <div class="store-info-panel">
+            <div class="store-info-panel-header">
+                <h5 class="store-info-panel-title">Delete Account</h5>
+                <button type="button" class="store-info-close" wire:click="$set('showModal', false)" wire:loading.attr="disabled">×</button>
+            </div>
+            <div class="store-info-panel-body">
+                <div class="store-info-card">
+                    @if ($showModal)
+                        <livewire:delete-account />
+                    
+                    @else
+                        <div class="store-info-loading">Loading...</div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
 
 </div>

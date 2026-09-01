@@ -5,9 +5,10 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Validate;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
-use App\Mail\StorePreApplicationEmail;
+use App\Models\StoreApplication;
+use App\Models\ApplicationSocial;
+use App\Mail\StoreApplicationEmail;
+use Illuminate\Support\Facades\RateLimiter;
 
 new class extends Component
 {
@@ -45,14 +46,12 @@ new class extends Component
             'email' => [
                 'required',
                 'email',
-                'unique:users,email',
             ],
             'store_name' => [
                 'required',
                 'string',
                 'min:3',
                 'max:50',
-                'unique:stores,name',
                 'regex:/^[^<>]*$/',
             ],
             'phone_number' => [
@@ -121,9 +120,17 @@ new class extends Component
         $this->social_media = array_values($this->social_media);
     }
 
-    public function verify(){
+    public function submit(){
+       if(!Auth::check()){
+            return $this->redirect(route('login'));
+        }
+
+        if(!auth()->user()->can('store')){
+            abort(403);
+        }
+
        // Rate limiting 
-       $key = 'submit-application:' . request()->ip();
+       $key = 'submit-application:' . auth()->user()->id . ':' . request()->ip();
        
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
@@ -140,29 +147,45 @@ new class extends Component
 
         $userData = $this->validate($this->rules());
 
-        $userData['logo'] = $this->logo->store('logos', 'public');
+        $path = $this->logo->store('logos', 'public');
+        return DB::transaction(function () use ($userData, $path) {
+            $storeApplicationData = StoreApplication::create([
+                'owner_name' => $this->owner_name,
+                'store_name' => $this->store_name,
+                'email' => $this->email,
+                'phone_number' => $this->phone_number,
+                'logo' => $path,
+                'description' => $this->description,
+                'address' => $this->address,
+            ]);
 
-        $existingCode = Cache::get("preapplication-email-code-{$this->email}");
+            foreach ($this->social_media as $social) {
+                $socialEntry = new ApplicationSocial();
+                $socialEntry->store_application_id = $storeApplicationData->id;
+                $socialEntry->platform = $social['platform'];
+                $socialEntry->user_name = $social['user_name'];
+                $socialEntry->save();
+            }
 
-        if($existingCode){
-            Cache::forget("preapplication-email-for-{$existingCode}");
-            Cache::forget("preapplication-email-code-{$this->email}");
-       }
+            $storeApplicationData->load('applicationSocials');
+            Mail::to($this->email)->send(new StoreApplicationEmail($storeApplicationData));
+            session()->flash('success','Application submitted successfully. Check your email for more information.');
+            $this->redirect(route('stores'), navigate: true);
+        });
 
-        $code = Str::random(6);
-        Cache::put("preapplication-email-for-{$code}", $userData, 15 * 60);
-        Cache::put("preapplication-email-code-{$this->email}", $code, 15 * 60);
-        Mail::to($this->email)->send(new StorePreApplicationEmail($code));
-        RateLimiter::hit('resend-preapplication-code:' . $this->email, 60);
-        session()->flash('email', $this->email);
-        $this->redirect(route('store-preapplication-notice'), navigate: true);
     }
 
     public function mount()
     {
-        if (Auth::check()) {
-            redirect()->route('dashboard');
+        if(!Auth::check()){
+            return $this->redirect(route('login'));
         }
+
+        if(!auth()->user()->can('store')){
+            abort(403);
+        }
+        $this->owner_name = auth()->user()->name;
+        $this->email = auth()->user()->email;
     }
 }
 ?>
@@ -211,12 +234,11 @@ new class extends Component
                 </div>
 
                 <!-- Signup Form -->
-                <form class="needs-validation" wire:submit="verify" novalidate>
+                <form class="needs-validation" wire:submit="submit" novalidate>
             
                     <!-- Owner Name -->
                     <div class="mb-3">
-                        <label class="form-label fw-semibold text-dark small mb-2">Owner Name</label>
-                        <input type="text" placeholder="John Doe" required wire:model.live.debounce.500ms="owner_name" autofocus>
+                        <input type="hidden" placeholder="John Doe" required autofocus>
                         @error('owner_name')
                             <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                         @enderror
@@ -233,8 +255,7 @@ new class extends Component
 
                     <!-- Email -->
                     <div class="mb-3">
-                        <label class="form-label fw-semibold text-dark small mb-2">Contact Email</label>
-                        <input type="email" placeholder="owner@example.com" required wire:model.live.debounce.500ms="email" inputmode="email">
+                        <input type="hidden" placeholder="owner@example.com" required inputmode="email">
                         @error('email')
                             <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                         @enderror
@@ -347,15 +368,6 @@ new class extends Component
                         </span>
                     </button>
                 </form>
-
-                <!-- Signup Redirect Footer -->
-                <div class="text-center mt-4 small text-muted">
-                        <span>Already have an account? <a href="{{ route('login') }}" class="text-color-1 text-decoration-none fw-bold">Sign in</a></span>
-                </div>
-
-                <div class="text-center mt-4 small text-muted">
-                        <span>Want to sign up as a customer? <a href="{{ route('signUp') }}" class="text-color-1 text-decoration-none fw-bold" wire:navigate>Sign Up</a></span>
-                </div>
 
             </div>
         </div>

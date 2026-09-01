@@ -162,9 +162,9 @@ new class extends Component
                     <div class="row g-3 justify-content-center">
 
                     <div class="mb-3">
-                        <label for="password_confirmation" class="form-label fw-semibold text-dark small mb-0">Current Password</label>
+                        <label for="current-password" class="form-label fw-semibold text-dark small mb-0">Current Password</label>
                         <div class="position-relative">
-                            <input id="password_confirmation" type="{{ $showCurrentPassword ? 'text' : 'password' }}" placeholder="••••••••" class="@error('currentPassword') is-invalid @enderror" required style="padding-right: 50px;" wire:model="currentPassword">
+                            <input id="current_password" type="{{ $showCurrentPassword ? 'text' : 'password' }}" placeholder="••••••••" class="@error('currentPassword') is-invalid @enderror" required style="padding-right: 50px;" wire:model="currentPassword">
                             <button class="position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-4 text-muted" type="button" id="togglePasswordBtn" style="height: 100%; display: flex; align-items: center; z-index: 10;" aria-label="Toggle Password Visibility">
                                 <!-- Eye Icon SVG (Visible by default) -->
                                 @if(!$showCurrentPassword)

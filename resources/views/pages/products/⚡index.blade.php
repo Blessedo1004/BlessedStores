@@ -80,7 +80,7 @@ new class extends Component
             abort(403);
         }
 
-        $product = Product::with('productImages')->where('slug', $slug)->firstOrFail();
+        $product = Product::with('productImages' , 'categories', 'brand')->where('slug', $slug)->firstOrFail();
 
         // Rate limiting
         $key = 'delete-product:' . $product->id . ':' . request()->ip();
@@ -99,7 +99,6 @@ new class extends Component
         RateLimiter::hit($key, 60 * 5);
 
         return DB::transaction(function () use ($product){        
-            $product->productImages()->delete();
             $product->delete();
             session()->flash('success', 'Product deleted successfully!');
         });    
@@ -189,10 +188,12 @@ new class extends Component
                     <thead>
                         <tr>
                             <th>Name</th>
+                            <th>SKU</th>
                             <th>Quantity</th>
                             <th>Price</th>
                             <th>Description</th>
                             <th>Status</th>
+                            <th>Visibility</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -200,12 +201,18 @@ new class extends Component
                         @forelse ($products as $product)
                         <tr wire:key="product-{{ $product->id }}" wire:transition>
                             <td class="fw-semibold text-dark">{{ Str::limit($product->name, 30) }}</td>
+                            <td class="fw-semibold text-dark">{{ $product->sku }}</td>
                             <td>{{ $product->quantity }}</td>
                             <td>₦{{ number_format($product->price, 2) }}</td>
                             <td>{{Str::limit($product->description, 50) }}</td>
                             <td>
                                 <span class="status-badge {{ $product->status === 'in-stock' ? 'bg-success' : 'bg-danger'}}">
                                     {{ $product->status === "in-stock" ? "In Stock" : "Out of Stock"}}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge {{ $product->visibility === 'draft' ? 'bg-warning' : 'bg-success'}}">
+                                    {{ $product->visibility === "draft" ? "Draft" : "Published"}}
                                 </span>
                             </td>
                             <td>
@@ -267,7 +274,7 @@ new class extends Component
                             <p><strong>Name:</strong> {{ $productInfo->name }}</p>
                             <p><strong>Quantity:</strong> {{ $productInfo->quantity }}</p>
                             <p><strong>Price:</strong> ₦{{ number_format($productInfo->price, 2) }}</p>
-                            <p><strong>Weight:</strong> {{ $productInfo->weight }}</p>
+                            <p><strong>Weight:</strong> {{ $productInfo->weight }}kg</p>
                             <p><strong>SKU:</strong> {{ $productInfo->sku }}</p>
                             <p><strong>Brand:</strong> {{ $productInfo->brand ? $productInfo->brand->name : 'N/A' }}</p>
                             <p><strong>Categories:</strong> 
@@ -278,6 +285,9 @@ new class extends Component
                             <p class="mt-4"><strong>Description:</strong> {{ $productInfo->description }}</p>
                             <p class="mt-4"><strong>Status:</strong> 
                                 <span class="status-badge {{ $productInfo->status === 'in-stock' ? 'bg-success' : 'bg-danger'}}">{{ $productInfo->status === "in-stock" ? "In Stock" : "Out of Stock"}}</span>
+                            </p>
+                            <p class="mt-4"><strong>Visibility:</strong> 
+                                <span class="status-badge {{ $productInfo->visibility === 'draft' ? 'bg-warning' : 'bg-success'}}">{{ $productInfo->visibility === "draft" ? "Draft" : "Published"}}</span>
                             </p>
                         </div>
                     @else

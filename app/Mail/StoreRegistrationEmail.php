@@ -20,9 +20,11 @@ class StoreRegistrationEmail extends Mailable implements ShouldQueue
     /**
      * Create a new message instance.
      */
-    public function __construct($password, $name, $store_name)
+    public function __construct($name, $store_name, $password = null)
     {
-        $this->password = $password;
+        if($password){
+            $this->password = $password;
+        }
         $this->name = $name;
         $this->store_name = $store_name;
     }
