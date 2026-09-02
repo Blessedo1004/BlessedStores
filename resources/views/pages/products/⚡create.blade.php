@@ -52,6 +52,11 @@ new class extends Component
             $storesTotal = $query->count();
             $stores = $query->take($this->storeLoadAmount)->get();
         }
+        else{
+            $stores = collect();
+            $storesTotal = 0; 
+            $this->store_id = null;
+        }
 
         if(filled($this->categoryTerm)){
             $query = Category::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->categoryTerm) . '%');
@@ -63,6 +68,11 @@ new class extends Component
             $query = Brand::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->brandTerm) . '%');
             $brandsTotal = $query->count();
             $brands = $query->take($this->brandLoadAmount)->get();
+        }
+        else{
+            $brands = collect();
+            $brandsTotal = 0; 
+            $this->brand_id = null;
         }
 
         return compact(

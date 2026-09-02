@@ -38,11 +38,21 @@ new class extends Component
             $storesTotal = $query->count();
             $stores = $query->take($this->storeLoadAmount)->get();
         }
+        else{
+            $stores = collect();
+            $storesTotal = 0; 
+            $this->store_id = null;
+        }
 
         if(filled($this->categoryTerm)){
             $query = Category::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->categoryTerm) . '%');
             $categoriesTotal = $query->count();
             $categories = $query->take($this->categoryLoadAmount)->get();
+        }
+        else{
+            $categories = collect();
+            $categoriesTotal = 0; 
+            $this->category_id = null;
         }
 
         $query = Product::with('store', 'productImages')
@@ -82,6 +92,14 @@ new class extends Component
      public function setCategory(Category $category){
         $this->category_id = $category->id;
         $this->categoryTerm = $category->name;
+    }
+
+    public function loadMoreStores(){
+        $this->storeLoadAmount+=3;
+    }
+
+    public function loadMoreCategories(){
+        $this->categoryLoadAmount+=3;
     }
 
      public function showProductInfo($slug){
@@ -307,6 +325,7 @@ new class extends Component
                     <thead>
                         <tr>
                             <th>Name</th>
+                            <th>Store</th>
                             <th>SKU</th>
                             <th>Quantity</th>
                             <th>Price</th>
@@ -320,6 +339,7 @@ new class extends Component
                         @forelse ($products as $product)
                         <tr wire:key="product-{{ $product->id }}" wire:transition>
                             <td class="fw-semibold text-dark">{{ Str::limit($product->name, 30) }}</td>
+                            <td class="fw-semibold text-dark">{{ $product->store->name }}</td>
                             <td class="fw-semibold text-dark">{{ $product->sku }}</td>
                             <td>{{ $product->quantity }}</td>
                             <td>₦{{ number_format($product->price, 2) }}</td>
