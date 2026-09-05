@@ -7,7 +7,16 @@
     --card-hover-shadow: 0 10px 30px rgba(177, 139, 94, 0.08);
     --livewire-progress-bar-color: var(--primary-color) !important;
 }
-
+.step{
+    border:1px solid black;
+    width:30px;
+    border-radius:50%;
+}
+.active{
+    background-color: var(--primary-color);
+    color: #ffffff;
+    font-weight: 600;
+}
 .logo {
     max-width: 200px;
 }

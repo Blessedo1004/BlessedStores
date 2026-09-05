@@ -31,6 +31,9 @@ class Product extends Model
         return $this->belongsTo(Brand::class);
     }
 
+    public function reviews(){
+        return $this->hasMany(Review::class);
+    }
     //create slug
     protected static function booted(): void
     {

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use App\Mail\PreRegistrationEmail;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Models\Category;
 use Illuminate\Support\Str;
 
 new class extends Component
@@ -26,6 +27,13 @@ new class extends Component
     public $showPassword = false;
     
     public $showConfirmPassword = false;
+
+    public int $step = 1;
+
+    public string $categoryTerm ='';
+    public array $selectedCategories = [];
+    public array $selectedCategoryTerms = [];
+    public int $categoryLoadAmount = 3;
 
     // Custom messages only for password fields
     protected $messages = [
@@ -76,7 +84,18 @@ new class extends Component
                 'required',
                 'same:password',
             ],
+            'selectedCategories' => [
+            'nullable',
+            'array',
+            'max:5',
+            ]
         ];
+    }
+
+    public function next(){
+        $this->validate($this->rules(), $this->messages);
+        $this->step = 2;
+
     }
 
     public function signup()
@@ -115,11 +134,49 @@ new class extends Component
         $this->redirect(route('preregistration-notice'), navigate: true);
     }
 
+    public function loadMoreCategories(){
+        $this->categoryLoadAmount+=3;
+    }
+
+    public function setCategory(Category $category){
+        if (count($this->selectedCategories) >= 5) {
+            $this->addError('categories', 'You can select a maximum of 5 categories.');
+            return;
+        }
+        if (!in_array($category->id, $this->selectedCategories, true)) {
+            $this->selectedCategories[] = $category->id;
+            $this->selectedCategoryTerms[] = $category->name;
+        }
+        $this->categoryTerm = '';
+    }
+
+    public function removeCategory($index)
+    {
+        unset($this->selectedCategories[$index], $this->selectedCategoryTerms[$index]);
+        $this->selectedCategories = array_values($this->selectedCategories);
+        $this->selectedCategoryTerms = array_values($this->selectedCategoryTerms);
+    }
+
     public function mount()
     {
         if (Auth::check()) {
             redirect()->route('dashboard');
         }
+    }
+
+    public function with(){
+        $categories = collect();
+        $categoriesTotal = 0;
+
+        if(filled($this->categoryTerm)){
+            $query = Category::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->categoryTerm) . '%');
+            $categoriesTotal = $query->count();
+            $categories = $query->take($this->categoryLoadAmount)->get();
+        }
+
+        return compact(
+            'categories', 'categoriesTotal',
+        );
     }
 }
 ?>
@@ -154,122 +211,195 @@ new class extends Component
                         <img src="{{ asset('imgs/logo/logo.png') }}" alt="logo" class="mb-3 logo">
                     </a>
                     <h1 class="h4 fw-bold text-dark mb-1" style="font-family: 'Sora', sans-serif;">Create an Account</h1>
-                    <p class="text-muted small mb-0">Fill in the details below to get started</p>
+                    <p class="text-muted small mb-0">{{ $step === 1 ? 'Fill in the details below to get started' : 'Select product categories you would like to follow (Optional)' }}</p>
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        <p class="step {{ $step === 1 ? 'active' : ''}}">1</p>
+                        <p class="step {{ $step === 2 ? 'active' : ''}}">2</p>
+                    </div>
                 </div>
 
                 <!-- Signup Form -->
                 <form class="needs-validation" wire:submit="signup">
-            
-                    <!-- Name Input -->
-                    <div class="mb-3">
-                        <label for="name" class="form-label fw-semibold text-dark small mb-2">Full Name</label>
-                        <input id="name" type="text" placeholder="John Doe" class="@error('name') is-invalid @enderror" required autofocus wire:model.live.debounce.500ms="name">
-                        @error('name')
-                            <div class="invalid-feedback mt-1 ">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <!-- Email Input -->
-                    <div class="mb-3">
-                        <label for="email" class="form-label fw-semibold text-dark small mb-2">Email Address</label>
-                        <input id="email" type="email" placeholder="name@example.com" class="@error('email') is-invalid @enderror" required wire:model.live.debounce.500ms="email">
-                        @error('email')
-                            <div class="invalid-feedback mt-1 ">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <!-- Password Input -->
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-2 flex-column">
-                            <label for="password" class="form-label fw-semibold text-dark small mb-0">Password</label>
-                            <div class="text-muted small">Minimum of 8 characters with at least one uppercase letter, one lowercase letter,one number and one special character</div>
+                    <div class="{{ $step === 2 ? 'd-none'  : ''}}" wire:transition>
+                        <!-- Name Input -->
+                        <div class="mb-3">
+                            <label for="name" class="form-label fw-semibold text-dark small mb-2">Full Name</label>
+                            <input id="name" type="text" placeholder="John Doe" class="@error('name') is-invalid @enderror" required autofocus wire:model.live.debounce.500ms="name">
+                            @error('name')
+                                <div class="invalid-feedback mt-1 ">{{ $message }}</div>
+                            @enderror
                         </div>
-                        <div class="position-relative">
-                            <input id="password" name="password" type="{{ $showPassword ? 'text' : 'password' }}" placeholder="••••••••" class="@error('password') is-invalid @enderror" required style="padding-right: 50px;" wire:model.live.debounce.500ms="password">
-                            <button class="position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-4 text-muted" type="button" id="togglePasswordBtn" style="height: 100%; display: flex; align-items: center; z-index: 10;" aria-label="Toggle Password Visibility">
-                                <!-- Eye Icon SVG (Visible by default) -->
-                                @if(!$showPassword)
-                                    <svg id="eyeOpenIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" wire:click="$set('showPassword', true)" wire:loading.attr="disabled">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
+
+                        <!-- Email Input -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label fw-semibold text-dark small mb-2">Email Address</label>
+                            <input id="email" type="email" placeholder="name@example.com" class="@error('email') is-invalid @enderror" required wire:model.live.debounce.500ms="email">
+                            @error('email')
+                                <div class="invalid-feedback mt-1 ">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Password Input -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2 flex-column">
+                                <label for="password" class="form-label fw-semibold text-dark small mb-0">Password</label>
+                                <div class="text-muted small">Minimum of 8 characters with at least one uppercase letter, one lowercase letter,one number and one special character</div>
+                            </div>
+                            <div class="position-relative">
+                                <input id="password" name="password" type="{{ $showPassword ? 'text' : 'password' }}" placeholder="••••••••" class="@error('password') is-invalid @enderror" required style="padding-right: 50px;" wire:model.live.debounce.500ms="password">
+                                <button class="position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-4 text-muted" type="button" id="togglePasswordBtn" style="height: 100%; display: flex; align-items: center; z-index: 10;" aria-label="Toggle Password Visibility">
+                                    <!-- Eye Icon SVG (Visible by default) -->
+                                    @if(!$showPassword)
+                                        <svg id="eyeOpenIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" wire:click="$set('showPassword', true)" wire:loading.attr="disabled">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        @else
+
+                                        <!-- Eye-Slash Icon SVG -->
+                                        <svg id="eyeClosedIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" wire:click="$set('showPassword', false)" wire:loading.attr="disabled">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                        </svg>  
+                                    @endif  
+                                </button>
+                            </div>
+
+                            @php
+                                $passwordHasMinLength = strlen($password) >= 8;
+                                $passwordHasLowercase = (bool) preg_match('/[a-z]/', $password);
+                                $passwordHasUppercase = (bool) preg_match('/[A-Z]/', $password);
+                                $passwordHasNumber = (bool) preg_match('/[0-9]/', $password);
+                                $passwordHasSymbol = (bool) preg_match('/[@$!%*#?&]/', $password);
+                            @endphp
+                            <div class="mt-3 px-3 py-2 rounded-3 border border-1 border-muted bg-light">
+                                <div class="small text-muted mb-2">Password must contain:</div>
+                                <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasMinLength ? 'text-success' : 'text-muted' }}">
+                                    <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasMinLength ? '✓' : '' }}</span>
+                                    <span>At least 8 characters</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasLowercase ? 'text-success' : 'text-muted' }}">
+                                    <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasLowercase ? '✓' : '' }}</span>
+                                    <span>Lowercase letter</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasUppercase ? 'text-success' : 'text-muted' }}">
+                                    <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasUppercase ? '✓' : '' }}</span>
+                                    <span>Uppercase letter</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasNumber ? 'text-success' : 'text-muted' }}">
+                                    <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasNumber ? '✓' : '' }}</span>
+                                    <span>Number</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 small mb-0 {{ $passwordHasSymbol ? 'text-success' : 'text-muted' }}">
+                                    <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasSymbol ? '✓' : '' }}</span>
+                                    <span>Special character (@$!%*#?&)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Password Confirmation Input -->
+                        <div class="mb-3">
+                            <label for="password_confirmation" class="form-label fw-semibold text-dark small mb-0">Confirm Password</label>
+                            <div class="position-relative">
+                                <input id="password_confirmation" type="{{ $showConfirmPassword ? 'text' : 'password' }}" placeholder="••••••••" class="@error('password_confirmation') is-invalid @enderror" required style="padding-right: 50px;" wire:model.live.debounce.500ms="password_confirmation">
+                                <button class="position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-4 text-muted" type="button" id="togglePasswordBtn" style="height: 100%; display: flex; align-items: center; z-index: 10;" aria-label="Toggle Password Visibility">
+                                    <!-- Eye Icon SVG (Visible by default) -->
+                                    @if(!$showConfirmPassword)
+                                        <svg id="eyeOpenIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" wire:click="$set('showConfirmPassword', true)" wire:loading.attr="disabled">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
                                     @else
-
-                                    <!-- Eye-Slash Icon SVG -->
-                                    <svg id="eyeClosedIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" wire:click="$set('showPassword', false)" wire:loading.attr="disabled">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-                                    </svg>  
-                                @endif  
-                            </button>
+                                        <!-- Eye-Slash Icon SVG -->
+                                        <svg id="eyeClosedIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" wire:click="$set('showConfirmPassword', false)" wire:loading.attr="disabled">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                        </svg>  
+                                    @endif
+                                </button>
+                            </div>
+                            @error('password_confirmation')
+                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                            @enderror
                         </div>
 
-                        @php
-                            $passwordHasMinLength = strlen($password) >= 8;
-                            $passwordHasLowercase = (bool) preg_match('/[a-z]/', $password);
-                            $passwordHasUppercase = (bool) preg_match('/[A-Z]/', $password);
-                            $passwordHasNumber = (bool) preg_match('/[0-9]/', $password);
-                            $passwordHasSymbol = (bool) preg_match('/[@$!%*#?&]/', $password);
-                        @endphp
-                        <div class="mt-3 px-3 py-2 rounded-3 border border-1 border-muted bg-light">
-                            <div class="small text-muted mb-2">Password must contain:</div>
-                            <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasMinLength ? 'text-success' : 'text-muted' }}">
-                                <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasMinLength ? '✓' : '' }}</span>
-                                <span>At least 8 characters</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasLowercase ? 'text-success' : 'text-muted' }}">
-                                <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasLowercase ? '✓' : '' }}</span>
-                                <span>Lowercase letter</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasUppercase ? 'text-success' : 'text-muted' }}">
-                                <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasUppercase ? '✓' : '' }}</span>
-                                <span>Uppercase letter</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2 small mb-1 {{ $passwordHasNumber ? 'text-success' : 'text-muted' }}">
-                                <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasNumber ? '✓' : '' }}</span>
-                                <span>Number</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2 small mb-0 {{ $passwordHasSymbol ? 'text-success' : 'text-muted' }}">
-                                <span style="width: 18px; display:inline-flex; justify-content:center; align-items:center;">{{ $passwordHasSymbol ? '✓' : '' }}</span>
-                                <span>Special character (@$!%*#?&)</span>
-                            </div>
-                        </div>
+                        <!-- Action Button -->
+                        <button type="button" class="fill-btn w-100 border-0" wire:loading.attr="disabled" wire:click="next">
+                            <span class="fill-btn-inner" wire:loading.remove wire:target="next">
+                                <span class="fill-btn-normal">Next Step</span>
+                                <span class="fill-btn-hover">Next Step</span>
+                            </span>
+                            <span class="fill-btn-inner" wire:loading wire:target="next">
+                                <span>Please wait...</span>
+                            </span>
+                        </button>
                     </div>
 
-                    <!-- Password Confirmation Input -->
-                    <div class="mb-3">
-                        <label for="password_confirmation" class="form-label fw-semibold text-dark small mb-0">Confirm Password</label>
-                        <div class="position-relative">
-                            <input id="password_confirmation" type="{{ $showConfirmPassword ? 'text' : 'password' }}" placeholder="••••••••" class="@error('password_confirmation') is-invalid @enderror" required style="padding-right: 50px;" wire:model.live.debounce.500ms="password_confirmation">
-                            <button class="position-absolute end-0 top-50 translate-middle-y border-0 bg-transparent pe-4 text-muted" type="button" id="togglePasswordBtn" style="height: 100%; display: flex; align-items: center; z-index: 10;" aria-label="Toggle Password Visibility">
-                                <!-- Eye Icon SVG (Visible by default) -->
-                                @if(!$showConfirmPassword)
-                                    <svg id="eyeOpenIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" wire:click="$set('showConfirmPassword', true)" wire:loading.attr="disabled">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                @else
-                                    <!-- Eye-Slash Icon SVG -->
-                                    <svg id="eyeClosedIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" wire:click="$set('showConfirmPassword', false)" wire:loading.attr="disabled">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-                                    </svg>  
-                                @endif
-                            </button>
-                        </div>
-                        @error('password_confirmation')
-                            <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
-                        @enderror
-                    </div>
+                    <div class="{{ $step === 1 ? 'd-none'  : ''}}" wire:transition>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-dark small mb-2">Category</label>
+                            <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search category" wire:model.live.debounce.500ms="categoryTerm" inputmode="search">
 
-                    <!-- Action Button -->
-                    <button type="submit" class="fill-btn w-100 border-0" wire:loading.attr="disabled">
-                        <span class="fill-btn-inner" wire:loading.remove wire:target="signup">
-                            <span class="fill-btn-normal">Sign Up</span>
-                            <span class="fill-btn-hover">Sign Up</span>
-                        </span>
-                        <span class="fill-btn-inner" wire:loading wire:target="signup">
-                            <span>Signing Up...</span>
-                        </span>
-                    </button>
+                            <div class="store-search-results" aria-live="polite">
+                                <div class="store-search-results-header">
+                                    <span>Category search results</span>
+                                    <span class="store-search-results-status" wire:loading wire:target="categoryTerm">Searching...</span>
+                                </div>
+                                <div class="store-search-results-body">
+                                    @if(!filled($categoryTerm))
+                                        <div class="store-search-results-empty" wire:loading.remove wire:target="categoryTerm">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+                                            </svg>
+                                            <span>Matching categories will appear here.</span>
+                                        </div>
+
+                                        @else
+                                        @forelse ($categories as $category)
+                                            <p class="store-search-result" wire:key="category-search-result-{{ $category->id }}" wire:click="setCategory({{ $category->id }})" wire:loading.attr="disabled">{{ $category->name }}</p>
+                                            @empty
+                                            <p class="text-muted text-center py-4">{{ "No results found for '{$categoryTerm}'" }}</p>
+                                        @endforelse
+                                        @if($categoryLoadAmount < $categoriesTotal)
+                                            <p class="text-center load-more mt-4" wire:click="loadMoreCategories" wire:loading.attr="disabled">
+                                                <span wire:loading.remove wire:target="loadMoreCategories">Load More</span>
+                                                <span wire:loading wire:target="loadMoreCategories">Loading...</span>
+                                            </p>
+                                        @endif
+                                    @endif
+                                </div>
+
+
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
+                                @foreach ($selectedCategoryTerms as $categoryTermValue)
+                                    <div class="social-badge" wire:key="selected-category-{{ $loop->index }}" wire:transition>
+                                        <div class="platform">
+                                            <div class="platform-name">Category</div>
+                                            <div class="username">{{ $categoryTermValue }}</div>
+                                        </div>
+                                        <button type="button" class="remove-btn" aria-label="Remove {{ $categoryTermValue }}" wire:click="removeCategory({{ $loop->index }})" wire:loading.attr="disabled">
+                                            <span wire:loading.remove wire:target="removeCategory({{ $loop->index }})">&times;</span>
+                                            <span wire:loading wire:target="removeCategory({{ $loop->index }})">...</span>
+                                        </button>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            @error('categories')
+                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <!-- Action Button -->
+                        <button type="submit" class="fill-btn w-100 border-0 mt-4" wire:loading.attr="disabled">
+                            <span class="fill-btn-inner" wire:loading.remove wire:target="signup">
+                                <span class="fill-btn-normal">Sign Up</span>
+                                <span class="fill-btn-hover">Sign Up</span>
+                            </span>
+                            <span class="fill-btn-inner" wire:loading wire:target="signup">
+                                <span>Signing Up...</span>
+                            </span>
+                        </button>
+                    </div>
                 </form>
 
                 <!-- Signup Redirect Footer -->

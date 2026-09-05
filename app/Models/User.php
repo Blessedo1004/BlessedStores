@@ -52,6 +52,9 @@ class User extends Authenticatable
         return $this->hasMany(Store::class);
     }
 
+    public function categories(){
+        return $this->belongsToMany(Category::class);
+    }
     public function storeApplications()
     {
         return $this->hasMany(StoreApplication::class, 'reviewed_by');
@@ -59,5 +62,9 @@ class User extends Authenticatable
 
     public function products(){
         return $this->hasMany(Product::class);
+    }
+
+    public function reviews(){
+        return $this->hasMany(Review::class);
     }
 }

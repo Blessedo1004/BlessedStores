@@ -11,6 +11,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 new class extends Component
 {
@@ -103,16 +104,21 @@ new class extends Component
             return;
         }
 
-        $user = new User();   
-        $user->name = $userData['name'];
-        $user->email = $userData['email'];
-        $user->password = Hash::make($userData['password']);
-        $user->save();
-        Cache::forget("preregistration-email-for-{$this->code}");
-        Cache::forget("preregistration-email-code-{$this->email}");
-        RateLimiter::clear($key);
-        session()->flash('success', 'Account successfully created. You can now sign in');
-        $this->redirect(route('login'));
+        return DB::transaction(function () use ($userData, $key) {
+            $user = new User();   
+            $user->name = $userData['name'];
+            $user->email = $userData['email'];
+            $user->password = Hash::make($userData['password']);
+            $user->save();
+            if($userData['selectedCategories']){
+                $user->categories()->attach($userData['selectedCategories']);
+            }
+            Cache::forget("preregistration-email-for-{$this->code}");
+            Cache::forget("preregistration-email-code-{$this->email}");
+            RateLimiter::clear($key);
+            session()->flash('success', 'Account successfully created. You can now sign in');
+            $this->redirect(route('login'));
+        });
     }
 };
 ?>
