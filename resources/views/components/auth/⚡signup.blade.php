@@ -184,7 +184,7 @@ new class extends Component
 <div class="w-100" style="max-width: 500px;">
         @php
             $rateLimitErrors = collect($errors->messages())
-                ->except(['name','email', 'password', 'password_confirmation'])
+                ->except(['name','email', 'password', 'password_confirmation', 'selectedCategories'])
                 ->flatten();
         @endphp
 
@@ -337,44 +337,35 @@ new class extends Component
                         <div class="col-12">
                             <label class="form-label fw-semibold text-dark small mb-2">Category</label>
                             <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search category" wire:model.live.debounce.500ms="categoryTerm" inputmode="search">
+                            <span class="store-search-results-status" wire:loading wire:target="categoryTerm"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Searching...</span>
+                            <span class="store-search-results-status" wire:loading wire:target="setCategory"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Setting category...</span>
+                             @if(filled($categoryTerm))
+                                <div class="store-search-results" aria-live="polite">
+                                    <div class="store-search-results-header">
+                                        <span>Category search results</span>
+                                    </div>
+                                    <div class="store-search-results-body">
+                                            @forelse ($categories as $category)
+                                                <p class="store-search-result" wire:key="category-search-result-{{ $category->id }}" wire:click="setCategory({{ $category->id }})" wire:loading.attr="disabled">{{ $category->name }}</p>
+                                                @empty
+                                                <p class="text-muted text-center py-4">{{ "No results found for '{$categoryTerm}'" }}</p>
+                                            @endforelse
+                                            @if($categoryLoadAmount < $categoriesTotal)
+                                                <p class="text-center load-more mt-4" wire:click="loadMoreCategories" wire:loading.attr="disabled">
+                                                    <span wire:loading.remove wire:target="loadMoreCategories">Load More</span>
+                                                    <span wire:loading wire:target="loadMoreCategories">Loading...</span>
+                                                </p>
+                                            @endif
+                                    </div>
 
-                            <div class="store-search-results" aria-live="polite">
-                                <div class="store-search-results-header">
-                                    <span>Category search results</span>
-                                    <span class="store-search-results-status" wire:loading wire:target="categoryTerm">Searching...</span>
+
                                 </div>
-                                <div class="store-search-results-body">
-                                    @if(!filled($categoryTerm))
-                                        <div class="store-search-results-empty" wire:loading.remove wire:target="categoryTerm">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
-                                            </svg>
-                                            <span>Matching categories will appear here.</span>
-                                        </div>
-
-                                        @else
-                                        @forelse ($categories as $category)
-                                            <p class="store-search-result" wire:key="category-search-result-{{ $category->id }}" wire:click="setCategory({{ $category->id }})" wire:loading.attr="disabled">{{ $category->name }}</p>
-                                            @empty
-                                            <p class="text-muted text-center py-4">{{ "No results found for '{$categoryTerm}'" }}</p>
-                                        @endforelse
-                                        @if($categoryLoadAmount < $categoriesTotal)
-                                            <p class="text-center load-more mt-4" wire:click="loadMoreCategories" wire:loading.attr="disabled">
-                                                <span wire:loading.remove wire:target="loadMoreCategories">Load More</span>
-                                                <span wire:loading wire:target="loadMoreCategories">Loading...</span>
-                                            </p>
-                                        @endif
-                                    @endif
-                                </div>
-
-
-                            </div>
+                            @endif
 
                             <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
                                 @foreach ($selectedCategoryTerms as $categoryTermValue)
                                     <div class="social-badge" wire:key="selected-category-{{ $loop->index }}" wire:transition>
                                         <div class="platform">
-                                            <div class="platform-name">Category</div>
                                             <div class="username">{{ $categoryTermValue }}</div>
                                         </div>
                                         <button type="button" class="remove-btn" aria-label="Remove {{ $categoryTermValue }}" wire:click="removeCategory({{ $loop->index }})" wire:loading.attr="disabled">

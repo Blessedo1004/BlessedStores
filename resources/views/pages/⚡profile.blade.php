@@ -5,6 +5,8 @@ use Livewire\Attributes\Title;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\Category;
+use Illuminate\Support\Facades\RateLimiter;
 
 new class extends Component
 {
@@ -15,11 +17,36 @@ new class extends Component
     public string $email = '';
     public string $status = '';
     public bool $showModal = false;
+    public string $categoryTerm ='';
+    public array $selectedCategories = [];
+    public array $selectedCategoryTerms = [];
+    public int $categoryLoadAmount = 3;
 
     public function mount(){
         $this->user = auth()->user();
         $this->name = auth()->user()->name;
         $this->status = auth()->user()->status;
+        if(auth()->user()->categories){
+            foreach(auth()->user()->categories as $category){
+                $this->selectedCategories[] = $category->id;
+                $this->selectedCategoryTerms[] = $category->name;
+            }
+        }
+    }
+
+    public function with(){
+        $categories = collect();
+        $categoriesTotal = 0;
+
+        if(filled($this->categoryTerm)){
+            $query = Category::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->categoryTerm) . '%');
+            $categoriesTotal = $query->count();
+            $categories = $query->take($this->categoryLoadAmount)->get();
+        }
+
+        return compact(
+            'categories', 'categoriesTotal'
+        );
     }
 
     public function updated($property)
@@ -47,8 +74,35 @@ new class extends Component
                 'required',
                 'in:active,suspended',
             ],
+            'selectedCategories' => [
+             'nullable',
+             'array',
+             'max:5']
 
     ];
+    }
+
+    public function loadMoreCategories(){
+        $this->categoryLoadAmount+=3;
+    }
+
+    public function setCategory(Category $category){
+        if (count($this->selectedCategories) >= 5) {
+            $this->addError('categories', 'You can select a maximum of 5 categories.');
+            return;
+        }
+        if (!in_array($category->id, $this->selectedCategories, true)) {
+            $this->selectedCategories[] = $category->id;
+            $this->selectedCategoryTerms[] = $category->name;
+        }
+        $this->categoryTerm = '';
+    }
+
+    public function removeCategory($index)
+    {
+        unset($this->selectedCategories[$index], $this->selectedCategoryTerms[$index]);
+        $this->selectedCategories = array_values($this->selectedCategories);
+        $this->selectedCategoryTerms = array_values($this->selectedCategoryTerms);
     }
 
     public function showDeleteAccountModal()
@@ -90,6 +144,9 @@ new class extends Component
             if(filled($this->email)){
                $this->user->email = $this->email;
             }
+            if($this->selectedCategories){
+                auth()->user()->categories()->sync($this->selectedCategories);
+            }
             $this->user->status = $this->status;
             $this->user->save();
             session()->flash('success','Profile updated successfully');
@@ -110,7 +167,7 @@ new class extends Component
 
         @php
             $rateLimitErrors = collect($errors->messages())
-                ->except(['name', 'email'])
+                ->except(['name', 'email','selectedCategories'])
                 ->flatten();
         @endphp 
         
@@ -157,7 +214,56 @@ new class extends Component
                         <div class="col-12 col-md-6 d-flex gap-2">
                             <label class="form-label fw-semibold text-dark small mb-2">Status:</label>
                             <p>{{ $status }}</p>
-                        </div>    
+                        </div>
+                        
+                        @can('customer')
+                             <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold text-dark small mb-2">Categories</label>
+                            <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search category" wire:model.live.debounce.500ms="categoryTerm" inputmode="search">
+                            <span class="store-search-results-status" wire:loading wire:target="categoryTerm"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Searching...</span>
+                            <span class="store-search-results-status" wire:loading wire:target="setCategory"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Setting category...</span>
+                           
+                            @if(filled($categoryTerm))
+                                <div class="store-search-results" aria-live="polite">
+                                    <div class="store-search-results-header">
+                                        <span>Category search results</span>
+                                    </div>
+                                    <div class="store-search-results-body">
+                                            @forelse ($categories as $category)
+                                                <p class="store-search-result" wire:key="category-search-result-{{ $category->id }}" wire:click="setCategory({{ $category->id }})" wire:loading.attr="disabled">{{ $category->name }}</p>
+                                                @empty
+                                                <p class="text-muted text-center py-4">{{ "No results found for '{$categoryTerm}'" }}</p>
+                                            @endforelse
+                                            @if($categoryLoadAmount < $categoriesTotal)
+                                                <p class="text-center load-more mt-4" wire:click="loadMoreCategories" wire:loading.attr="disabled">
+                                                    <span wire:loading.remove wire:target="loadMoreCategories">Load More</span>
+                                                    <span wire:loading wire:target="loadMoreCategories">Loading...</span>
+                                                </p>
+                                            @endif
+                                    </div>
+
+
+                                </div>
+                            @endif
+                            <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
+                                @foreach ($selectedCategoryTerms as $categoryTermValue)
+                                    <div class="social-badge" wire:key="selected-category-{{ $loop->index }}" wire:transition>
+                                        <div class="platform">
+                                            <div class="username">{{ $categoryTermValue }}</div>
+                                        </div>
+                                        <button type="button" class="remove-btn" aria-label="Remove {{ $categoryTermValue }}" wire:click="removeCategory({{ $loop->index }})" wire:loading.attr="disabled">
+                                            <span wire:loading.remove wire:target="removeCategory({{ $loop->index }})">&times;</span>
+                                            <span wire:loading wire:target="removeCategory({{ $loop->index }})">...</span>
+                                        </button>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            @error('categories')
+                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                            @enderror
+                             </div>
+                        @endcan
 
 
                         <div class="col-12 col-sm-7 text-center mt-4">

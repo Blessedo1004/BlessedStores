@@ -12,6 +12,7 @@
     width:30px;
     border-radius:50%;
 }
+
 .active{
     background-color: var(--primary-color);
     color: #ffffff;
@@ -104,6 +105,27 @@ textarea{
     background-color: var(--primary-color);
     color: #ffffff;
     font-weight: 600;
+}
+
+.dashboard-sidebar .sidebar-profile {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    margin-top: 20px;
+    padding-top: 20px;
+    padding-bottom: 8px;
+}
+
+.dashboard-sidebar .sidebar-profile strong {
+    color: #ffffff;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.dashboard-sidebar .sidebar-profile small {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1rem;
+    font-weight: 400;
+    overflow-wrap: anywhere;
 }
 
 .dashboard-sidebar .sidebar-brand {

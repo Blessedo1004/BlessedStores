@@ -138,6 +138,16 @@
                     @endif
                 </nav>
                 
+            <a href="{{ route('profile') }}" class="sidebar-profile nav-link d-lg-none" wire:navigate>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0" />
+                </svg>
+                <span>
+                    <strong class="d-block">{{ Auth::user()->name }}</strong>
+                    <small>{{ Auth::user()->email }}</small>
+                </span>
+            </a>
+
             <livewire:logout />    
             </div>
 
@@ -182,7 +192,7 @@
                     <div class="vr bg-secondary opacity-25" style="height: 24px;"></div>
 
                     <!-- User Profile Dropdown -->
-                    <div class="dropdown">
+                    <div class="dropdown d-none d-lg-block">
                         <button class="btn btn-link text-decoration-none d-flex align-items-center gap-2 p-0 text-dark" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
                             {{-- <div class="rounded-circle d-flex align-items-center justify-content-center bg-color-1 text-white fw-bold shadow-sm" style="width: 40px; height: 40px; background-color: var(--primary-color);">
                                 
