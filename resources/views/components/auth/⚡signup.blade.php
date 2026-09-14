@@ -169,9 +169,9 @@ new class extends Component
         $categoriesTotal = 0;
 
         if(filled($this->categoryTerm)){
-            $query = Category::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->categoryTerm) . '%');
+            $query = Category::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->categoryTerm) . '%')->mainCategory();
             $categoriesTotal = $query->count();
-            $categories = $query->take($this->categoryLoadAmount)->get();
+            $categories = $query->take($this->categoryLoadAmount)->orderBy('name', 'asc')->get(['id', 'name']);
         }
 
         return compact(

@@ -479,6 +479,47 @@
 		},
 	});
 
+	var newArrivals = new Swiper(".new-arrivals-active", {
+		slidesPerView: 4,
+		spaceBetween: 15,
+		loop: false,
+		watchOverflow: true,
+		roundLengths: true,
+		autoplay: {
+			delay: 3000,
+		},
+		pagination: {
+			el: ".bd-swiper-dot",
+			clickable: true,
+		},
+		navigation: {
+			nextEl: ".discount-slider-button-prev",
+			prevEl: ".discount-slider-button-next",
+		},
+		breakpoints: {
+			1200: {
+				slidesPerView: 4,
+			},
+			992: {
+				slidesPerView: 3,
+			},
+			768: {
+				slidesPerView: 3,
+			},
+			576: {
+				slidesPerView: 2,
+			},
+			0: {
+				slidesPerView: 1,
+			},
+		},
+	});
+	var newArrivalsSection = document.querySelector(".new-arrivals-section");
+	if (newArrivalsSection && newArrivals.slides.length <= 1) {
+		newArrivalsSection.classList.add("single-product");
+		newArrivalsSection.querySelector(".discount-slider-navigation").hidden = true;
+	}
+
 	var product = new Swiper(".furuniture-active", {
 		slidesPerView: 4,
 		spaceBetween: 15,

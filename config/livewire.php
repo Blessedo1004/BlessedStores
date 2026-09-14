@@ -21,6 +21,7 @@ return [
     'component_namespaces' => [
         'layouts' => resource_path('views/layouts'),
         'pages' => resource_path('views/pages'),
+        'store' => resource_path('views/store')
     ],
 
     'component_layout' => 'layouts::app',

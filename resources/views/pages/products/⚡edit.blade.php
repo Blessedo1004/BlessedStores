@@ -76,21 +76,21 @@ new class extends Component
         if(filled($this->storeTerm)){
             $query = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->storeTerm) . '%')->where('user_id', auth()->user()->id);
             $storesTotal = $query->count();
-            $stores = $query->take($this->storeLoadAmount)->get();
+            $stores = $query->take($this->storeLoadAmount)->orderBy('name', 'asc')->get(['id', 'name']);
         } else {
             $this->store_id = null;
         }
 
         if(filled($this->categoryTerm)){
-            $query = Category::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->categoryTerm) . '%');
+            $query = Category::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->categoryTerm) . '%')->mainCategory();
             $categoriesTotal = $query->count();
-            $categories = $query->take($this->categoryLoadAmount)->get();
+            $categories = $query->take($this->categoryLoadAmount)->orderBy('name', 'asc')->get(['id', 'name']);
         }
 
          if(filled($this->brandTerm)){
             $query = Brand::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->brandTerm) . '%');
             $brandsTotal = $query->count();
-            $brands = $query->take($this->brandLoadAmount)->get();
+            $brands = $query->take($this->brandLoadAmount)->orderBy('name', 'asc')->get(['id', 'name']);
         } else {
             $this->brand_id = null;
         }

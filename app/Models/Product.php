@@ -34,6 +34,11 @@ class Product extends Model
     public function reviews(){
         return $this->hasMany(Review::class);
     }
+
+    public function carts(){
+        return $this->hasMany(Cart::class);
+    }
+    
     //create slug
     protected static function booted(): void
     {
@@ -77,4 +82,14 @@ class Product extends Model
 
         return $slug;
     } 
+
+    public function scopeInStock($query)
+    {
+        return $query->where('status', 'in-stock');
+    }
+
+    public function scopeVisible($query)
+    {
+        return $query->where('visibility', 'published');
+    }
 }

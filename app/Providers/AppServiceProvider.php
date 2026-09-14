@@ -25,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
     {
         if (app()->bound('livewire')) {
             app('livewire')->addLocation(viewPath: resource_path('views/pages'));
+            app('livewire')->addLocation(viewPath: resource_path('views/store'));
         }
 
         // Define rate limiter for login

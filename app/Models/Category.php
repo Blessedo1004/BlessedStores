@@ -21,6 +21,18 @@ class Category extends Model
         return $this->belongsToMany(User::class);
     }
 
+    public function parent(){
+       return $this->belongsTo(Category::class, 'parent_id');
+    }
+    
+    public function subCategories(){
+        return $this->hasMany(Category::class, 'parent_id')->with('subCategories');
+    }
+
+    public function scopeMainCategory($query){
+        return $query->whereNull('parent_id');
+    }
+
     //create slug
     protected static function booted(): void
     {

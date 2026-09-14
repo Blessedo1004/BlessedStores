@@ -9157,6 +9157,9 @@ div[class*=col]:last-child .counter-item-2::after {
     right: 0;
   }
 }
+.new-arrivals-section.single-product .swiper-wrapper {
+  justify-content: center;
+}
 
 /*----------------------------------------*/
 /*  PRODUCT CSS START

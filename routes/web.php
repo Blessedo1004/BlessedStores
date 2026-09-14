@@ -3,11 +3,10 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\WebController;
 
 
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+Route::get('/', [WebController::class,'home'])->name('home');
 
 Route::livewire('/signup', 'auth.⚡signup')->name('signUp');
 Route::livewire('/register-store', 'auth.⚡register-store')->name('register-store');

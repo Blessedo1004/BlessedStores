@@ -41,7 +41,7 @@ new class extends Component
         if(filled($this->categoryTerm)){
             $query = Category::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->categoryTerm) . '%');
             $categoriesTotal = $query->count();
-            $categories = $query->take($this->categoryLoadAmount)->get();
+            $categories = $query->take($this->categoryLoadAmount)->get(['id', 'name']);
         }
 
         return compact(
@@ -276,8 +276,8 @@ new class extends Component
                                             </span>
 
                                             <span class="fill-btn-inner" wire:loading wire:target="save">
-                                                <span class="fill-btn-normal">Updating</span>
-                                                <span class="fill-btn-hover">Updating</span>
+                                                <span class="fill-btn-normal">Updating...</span>
+                                                <span class="fill-btn-hover">Updating...</span>
                                             </span>
                                     </button>
                                 </div>
