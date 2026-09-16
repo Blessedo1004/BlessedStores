@@ -54,6 +54,7 @@ new class extends Component
         }
 
         $query = Product::with('store', 'productImages')
+            ->where('user_id', auth()->user()->id)
             ->when($this->status, function ($query) {
                 $query->where('status', $this->status);
             })

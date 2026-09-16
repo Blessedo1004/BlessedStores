@@ -170,7 +170,7 @@
    <div class="offcanvas__overlay-white"></div>
    <!-- Offcanvas area start -->
 
-   <!-- Add cart modal area start -->
+   <!-- Quick view modal area start -->
    <div class="product-modal-sm modal fade" id="producQuickViewModal" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered">
          <div class="modal-content">
@@ -304,7 +304,7 @@
          </div>
       </div>
    </div>
-   <!-- Add cart modal area end -->
+   <!-- Quick view modal area end -->
 
    <!-- Header area start -->
    <header>
@@ -443,17 +443,7 @@
                                  <span class="header-action-badge bg-furniture">3</span>
                               </a>
                            </div>
-                           <div class="header-action-item">
-                              <a href="cart.html" class="header-action-btn cartmini-open-btn">
-                                 <svg width="21" height="23" viewBox="0 0 21 23" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <path
-                                       d="M14.0625 10.6C14.0625 12.5883 12.4676 14.2 10.5 14.2C8.53243 14.2 6.9375 12.5883 6.9375 10.6M1 5.8H20M1 5.8V13C1 20.6402 2.33946 22 10.5 22C18.6605 22 20 20.6402 20 13V5.8M1 5.8L2.71856 2.32668C3.12087 1.5136 3.94324 1 4.84283 1H16.1571C17.0568 1 17.8791 1.5136 18.2814 2.32668L20 5.8"
-                                       stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                 </svg>
-                                 <span class="header-action-badge bg-furniture">12</span>
-                              </a>
-                           </div>
+                           <livewire:cart/>
                         </div>
                         <div class="header-humbager ml-30">
                            <a class="sidebar__toggle" href="javascript:void(0)">

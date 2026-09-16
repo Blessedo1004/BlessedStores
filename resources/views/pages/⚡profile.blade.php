@@ -217,52 +217,54 @@ new class extends Component
                         </div>
                         
                         @can('customer')
-                             <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold text-dark small mb-2">Categories</label>
-                            <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search category" wire:model.live.debounce.500ms="categoryTerm" inputmode="search">
-                            <span class="store-search-results-status" wire:loading wire:target="categoryTerm"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Searching...</span>
-                            <span class="store-search-results-status" wire:loading wire:target="setCategory"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Setting category...</span>
-                           
-                            @if(filled($categoryTerm))
-                                <div class="store-search-results" aria-live="polite">
-                                    <div class="store-search-results-header">
-                                        <span>Category search results</span>
-                                    </div>
-                                    <div class="store-search-results-body">
-                                            @forelse ($categories as $category)
-                                                <p class="store-search-result" wire:key="category-search-result-{{ $category->id }}" wire:click="setCategory({{ $category->id }})" wire:loading.attr="disabled">{{ $category->name }}</p>
-                                                @empty
-                                                <p class="text-muted text-center py-4">{{ "No results found for '{$categoryTerm}'" }}</p>
-                                            @endforelse
-                                            @if($categoryLoadAmount < $categoriesTotal)
-                                                <p class="text-center load-more mt-4" wire:click="loadMoreCategories" wire:loading.attr="disabled">
-                                                    <span wire:loading.remove wire:target="loadMoreCategories">Load More</span>
-                                                    <span wire:loading wire:target="loadMoreCategories">Loading...</span>
-                                                </p>
-                                            @endif
-                                    </div>
-
-
-                                </div>
-                            @endif
-                            <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
-                                @foreach ($selectedCategoryTerms as $categoryTermValue)
-                                    <div class="social-badge" wire:key="selected-category-{{ $loop->index }}" wire:transition>
-                                        <div class="platform">
-                                            <div class="username">{{ $categoryTermValue }}</div>
+                            @island
+                                <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold text-dark small mb-2">Categories</label>
+                                <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search category" wire:model.live.debounce.500ms="categoryTerm" inputmode="search">
+                                <span class="store-search-results-status" wire:loading wire:target="categoryTerm"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Searching...</span>
+                                <span class="store-search-results-status" wire:loading wire:target="setCategory"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Setting category...</span>
+                            
+                                @if(filled($categoryTerm))
+                                    <div class="store-search-results" aria-live="polite">
+                                        <div class="store-search-results-header">
+                                            <span>Category search results</span>
                                         </div>
-                                        <button type="button" class="remove-btn" aria-label="Remove {{ $categoryTermValue }}" wire:click="removeCategory({{ $loop->index }})" wire:loading.attr="disabled">
-                                            <span wire:loading.remove wire:target="removeCategory({{ $loop->index }})">&times;</span>
-                                            <span wire:loading wire:target="removeCategory({{ $loop->index }})">...</span>
-                                        </button>
-                                    </div>
-                                @endforeach
-                            </div>
+                                        <div class="store-search-results-body">
+                                                @forelse ($categories as $category)
+                                                    <p class="store-search-result" wire:key="category-search-result-{{ $category->id }}" wire:click="setCategory({{ $category->id }})" wire:loading.attr="disabled">{{ $category->name }}</p>
+                                                    @empty
+                                                    <p class="text-muted text-center py-4">{{ "No results found for '{$categoryTerm}'" }}</p>
+                                                @endforelse
+                                                @if($categoryLoadAmount < $categoriesTotal)
+                                                    <p class="text-center load-more mt-4" wire:click="loadMoreCategories" wire:loading.attr="disabled">
+                                                        <span wire:loading.remove wire:target="loadMoreCategories">Load More</span>
+                                                        <span wire:loading wire:target="loadMoreCategories">Loading...</span>
+                                                    </p>
+                                                @endif
+                                        </div>
 
-                            @error('categories')
-                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
-                            @enderror
-                             </div>
+
+                                    </div>
+                                @endif
+                                <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
+                                    @foreach ($selectedCategoryTerms as $categoryTermValue)
+                                        <div class="social-badge" wire:key="selected-category-{{ $loop->index }}" wire:transition>
+                                            <div class="platform">
+                                                <div class="username">{{ $categoryTermValue }}</div>
+                                            </div>
+                                            <button type="button" class="remove-btn" aria-label="Remove {{ $categoryTermValue }}" wire:click="removeCategory({{ $loop->index }})" wire:loading.attr="disabled">
+                                                <span wire:loading.remove wire:target="removeCategory({{ $loop->index }})">&times;</span>
+                                                <span wire:loading wire:target="removeCategory({{ $loop->index }})">...</span>
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                                @error('categories')
+                                    <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                                @enderror
+                                </div>
+                            @endisland
                         @endcan
 
 

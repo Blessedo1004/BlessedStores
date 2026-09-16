@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\FilterByUser;
 
 class Cart extends Model
 {
+    use FilterByUser;
     protected $fillable = ['user_id', 'product_id', 'quantity'];
 
     public function user(){

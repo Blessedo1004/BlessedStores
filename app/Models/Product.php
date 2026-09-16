@@ -4,11 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-use App\Traits\FilterByUser;
 
 class Product extends Model
 {
-    use FilterByUser;
     protected $fillable = ['store_id','user_id', 'name', 'quantity', 'price', 'slug', 'description', 'status', 'weight', 'sku', 'brand_id'];
 
     public function store(){
@@ -32,7 +30,7 @@ class Product extends Model
     }
 
     public function reviews(){
-        return $this->hasMany(Review::class);
+        return $this->hasMany(ProductReview::class);
     }
 
     public function carts(){

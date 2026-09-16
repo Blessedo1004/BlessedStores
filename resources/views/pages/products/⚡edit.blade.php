@@ -39,7 +39,7 @@ new class extends Component
     
 
     public function mount($slug){
-        $product = Product::with('store', 'productImages', 'categories', 'brand')->where('slug', $slug)->firstOrFail();
+        $product = Product::with('store', 'productImages', 'categories', 'brand')->where('slug', $slug)->where('user_id', auth()->user()->id)->firstOrFail();
         $this->product = $product;
         $this->quantity = $product->quantity;
         $this->price = $product->price;
