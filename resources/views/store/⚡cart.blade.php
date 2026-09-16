@@ -1,7 +1,7 @@
 <?php
 
 use Livewire\Component;
-use App\Models\Cart;
+use App\Services\CartService;
 use Livewire\Attributes\On;
 
 new class extends Component
@@ -18,25 +18,32 @@ new class extends Component
     }
 
     public function getCartCount(){
-        $this->cartCount = Cart::sum('quantity');
+        $this->cartCount = app(CartService::class)->count();
     }
 
     public function getCartItems(){
-        $this->cartItems = Cart::
-            with('product.productImages')
-            ->latest()
-            ->get();
+        $this->cartItems = app(CartService::class)->items();
     }
 
-    public function increaseQuantity(Cart $cart){
-        $cart->quantity++;
-        $cart->save();
+    public function increaseQuantity(int $productId){
+        $item = $this->cartItems->firstWhere('product_id', $productId);
+        app(CartService::class)->updateQuantity($productId, $item->quantity + 1);
         $this->dispatch('cart-updated');
     }
 
-    public function decreaseQuantity(Cart $cart){
-        $cart->quantity--;
-        $cart->save();
+    public function decreaseQuantity(int $productId){
+        $item = $this->cartItems->firstWhere('product_id', $productId);
+
+        if ($item->quantity <= 1) {
+            return;
+        }
+
+        app(CartService::class)->updateQuantity($productId, $item->quantity - 1);
+        $this->dispatch('cart-updated');
+    }
+
+    public function removeItem(int $productId){
+        app(CartService::class)->remove($productId);
         $this->dispatch('cart-updated');
     }
 
@@ -48,14 +55,14 @@ new class extends Component
 ?>
 
 <div class="header-action-item">
-    <a class="header-action-btn cartmini-open-btn" wire:click="$set('showCartModal', true)" aria-label="Open cart">
+    <a class="header-action-btn cartmini-open-btn" wire:click="$set('showCartModal', true)" aria-label="Open cart" title="Cart">
         <svg width="21" height="23" viewBox="0 0 21 23" fill="none"
         xmlns="http://www.w3.org/2000/svg">
         <path
             d="M14.0625 10.6C14.0625 12.5883 12.4676 14.2 10.5 14.2C8.53243 14.2 6.9375 12.5883 6.9375 10.6M1 5.8H20M1 5.8V13C1 20.6402 2.33946 22 10.5 22C18.6605 22 20 20.6402 20 13V5.8M1 5.8L2.71856 2.32668C3.12087 1.5136 3.94324 1 4.84283 1H16.1571C17.0568 1 17.8791 1.5136 18.2814 2.32668L20 5.8"
             stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
-        <span class="header-action-badge bg-furniture">{{  $cartCount }}</span>
+        <span class="header-action-badge bg-furniture">{{ $cartCount }}</span>
     </a>
 
         <div class="offcanvas__info cart-items-modal {{ $showCartModal ? 'info-open' : 'd-none' }}" wire:transition>
@@ -84,19 +91,27 @@ new class extends Component
                                 </div>
                                 <div class="cart-item__quantity" aria-label="Quantity for {{ $cartItem->product->name }}">
                                     <div class="product-quantity-form">
-                                        <button type="button" class="cart-quantity-btn cart-minus" aria-label="Decrease quantity" wire:click="decreaseQuantity({{ $cartItem->id }})" @disabled($cartItem->quantity === 1)>
+                                        <button type="button" class="cart-quantity-btn cart-minus" aria-label="Decrease quantity" wire:click="decreaseQuantity({{ $cartItem->product_id }})" @disabled($cartItem->quantity === 1) wire:loading.attr="disabled">
                                             <i class="far fa-minus"></i>
                                         </button>
                                         <input class="cart-input" type="text" value="{{ $cartItem->quantity }}" aria-label="Quantity">
-                                        <button type="button" class="cart-quantity-btn cart-plus" aria-label="Increase quantity" wire:click="increaseQuantity({{ $cartItem->id }})" @disabled($cartItem->quantity === $cartItem->product->quantity)>
+                                        <button type="button" class="cart-quantity-btn cart-plus" aria-label="Increase quantity" wire:click="increaseQuantity({{ $cartItem->product_id }})" @disabled($cartItem->quantity === $cartItem->product->quantity) wire:loading.attr="disabled">
                                             <i class="far fa-plus"></i>
                                         </button>
                                     </div>
                                 </div>
+                                <button type="button" class="cart-item__remove" wire:click="removeItem({{ $cartItem->product_id }})" aria-label="Remove {{ $cartItem->product->name }} from cart" title="Remove item" wire:loading.attr="disabled">
+                                    <i class="fal fa-times"></i>
+                                </button>
                             </div>
                         @empty
                             <p class="cart-empty">Your cart is empty.</p>
                         @endforelse
+                    </div>
+
+                    <div class="cart-total">
+                        <span class="cart-total__label">Total</span>
+                        <strong class="cart-total__amount">₦{{ number_format($cartItems->sum(fn ($cartItem) => $cartItem->product->price * $cartItem->quantity), 2) }}</strong>
                     </div>
                 </div>
             </div>

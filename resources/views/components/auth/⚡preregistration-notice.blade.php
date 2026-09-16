@@ -12,6 +12,7 @@ use Livewire\Attributes\Title;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use App\Services\CartService;
 
 new class extends Component
 {
@@ -104,7 +105,8 @@ new class extends Component
             return;
         }
 
-        return DB::transaction(function () use ($userData, $key) {
+        $cartToken = session('cart_token');
+        $user = DB::transaction(function () use ($userData, $key) {
             $user = new User();   
             $user->name = $userData['name'];
             $user->email = $userData['email'];
@@ -116,9 +118,12 @@ new class extends Component
             Cache::forget("preregistration-email-for-{$this->code}");
             Cache::forget("preregistration-email-code-{$this->email}");
             RateLimiter::clear($key);
-            session()->flash('success', 'Account successfully created. You can now sign in');
-            $this->redirect(route('login'));
+            return $user;
         });
+
+        app(CartService::class)->mergeGuestCart($user, $cartToken);
+        session()->flash('success', 'Account successfully created. You can now sign in');
+        $this->redirect(route('login'));
     }
 };
 ?>

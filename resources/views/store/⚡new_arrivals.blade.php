@@ -2,7 +2,7 @@
 
 use Livewire\Component;
 use App\Models\Product;
-use App\Models\Cart;
+use App\Services\CartService;
 
 new class extends Component
 {
@@ -43,21 +43,9 @@ new class extends Component
 
     public function addToCart($slug){
         $product = Product::with('productImages')->where('slug' , $slug)->firstOrFail();
-        $existingProduct = Cart::where('product_id' , $product->id)->first();
-        if($existingProduct){
-            $existingProduct->quantity++;
-            $existingProduct->save();
+        if (app(CartService::class)->add($product)) {
             $this->dispatch('cart-updated');
         }
-
-        else{
-            $cart = new Cart();
-            $cart->product_id = $product->id;
-            $cart->save();
-            $this->dispatch('cart-updated');
-        }
-        
-
     }
 };
 ?>
@@ -89,8 +77,8 @@ new class extends Component
                                     <span class="product-trending">10% off</span>
                                     </div> -->
                                     <div class="product-thumb theme-bg-2">
-                                    <a href="product-details.html"><img src="{{ asset('storage/' . $newArrival->productImages[0]->image) }}"
-                                            alt="{{ $newArrival->name }}" loading="lazy"></a>
+                                    <img src="{{ asset('storage/' . $newArrival->productImages[0]->image) }}"
+                                            alt="{{ $newArrival->name }}" loading="lazy">
                                     <div class="product-action-item">
                                         <button type="button" class="product-action-btn"  wire:click="addToCart(@js($newArrival->slug))" wire:loading.attr="disabled">
                                             <svg width="20" height="22" viewBox="0 0 20 22" fill="none"
@@ -128,7 +116,7 @@ new class extends Component
                                         </button>
                                     </div>
                                     </div>
-                                    <div class="product-content">
+                                    <div class="product-content text-center">
                                     <h4 class="product-title"><a href="product-details.html">{{ $newArrival->name }}</a></h4>
                                     <div class="user-rating">
                                         <i class="fal fa-star"></i>
@@ -146,6 +134,24 @@ new class extends Component
                             @endforeach
                     </div>
                 </div>
+                @if(session('success'))
+                    <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-7 mx-auto d-block">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>{{session('success')}}</span>
+                    </div>
+                    
+                @endif
+
+                @if(session('error'))
+                    <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-7 mx-auto d-block">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                        <span>{{session('error')}}</span>
+                    </div>
+                @endif
             </div>
         </div>
     </div>

@@ -23,6 +23,12 @@
 
 <body>
 
+   @if(session('error'))
+      <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-9 col-md-5 position-fixed">
+         <span>{{ session('error') }}</span>
+      </div>
+   @endif
+
    <!-- preloader start -->
    <div id="preloader">
       <div class="bd-loader-inner">
@@ -355,13 +361,7 @@
                         <span class="header-setting-toggle text-white" id="header-setting-toggle">Setting</span>
                         <ul>
                            <li>
-                              <a class="furniture-clr-hover" href="#">My Profile</a>
-                           </li>
-                           <li>
-                              <a class="furniture-clr-hover" href="wishlist.html">Wishlist</a>
-                           </li>
-                           <li>
-                              <a class="furniture-clr-hover" href="cart.html">Cart</a>
+                              <a class="furniture-clr-hover" href="{{ route('profile') }}">My Profile</a>
                            </li>
                            <li>
                               @auth
