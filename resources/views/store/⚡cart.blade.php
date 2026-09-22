@@ -73,7 +73,7 @@ new class extends Component
                             <h4 class="text-white mb-0">Your Cart</h4>
                         </div>
                         <div class="offcanvas__close">
-                            <button type="button" wire:click="$set('showCartModal', false)" aria-label="Close cart">
+                            <button type="button" aria-label="Close cart">
                                 <i class="fal fa-times"></i>
                             </button>
                         </div>

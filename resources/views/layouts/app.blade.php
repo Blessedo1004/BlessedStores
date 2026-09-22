@@ -111,6 +111,16 @@
                     </a>
 
                     @can('super-admin')
+                      <a class="nav-link {{ request()->routeIs('categories') || request()->routeIs('categories.create') || request()->routeIs('categories.edit') ? 'active' : ''}} }}" href="{{ route('categories') }}" wire:navigate>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M20.59 13.41 13.41 20.59a2 2 0 0 1-2.82 0L3.41 13.41a2 2 0 0 1 0-2.82l7.18-7.18a2 2 0 0 1 1.41-.59H18a2 2 0 0 1 2 2v6a2 2 0 0 1-.59 1.41Z" />
+                              <circle cx="16" cy="8" r="1" />
+                          </svg>
+                          <span>Categories</span>
+                      </a>
+                    @endcan
+
+                    @can('super-admin')
                       <a class="nav-link {{ request()->routeIs('admins') || request()->routeIs('admins.create') || request()->routeIs('admins.edit') ? 'active' : ''}} }}" href="{{ route('admins') }}" wire:navigate>
                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />

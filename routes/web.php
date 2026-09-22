@@ -35,6 +35,9 @@ Route::group(['middleware' => ['auth', 'cache.headers:no_store,private', 'auth.s
    Route::livewire('/products/create', 'products/⚡create')->name('products.create')->middleware(['can:store']);
    Route::livewire('/products/edit/{slug}', 'products/⚡edit')->name('products.edit')->middleware(['can:store']);
    Route::livewire('/add-store', 'stores/⚡register-store')->name('stores.register')->middleware(['can:store']);
+   Route::livewire('/categories', 'categories/⚡index')->name('categories')->middleware(['can:super-admin']);
+   Route::livewire('/categories/create', 'categories/⚡create')->name('categories.create')->middleware(['can:super-admin']);
+   Route::livewire('/categories/edit/{slug}', 'categories/⚡edit')->name('categories.edit')->middleware(['can:super-admin']);
 });
 
 Route::get('/payment', [PaymentController::class, 'showForm'])->name('payment.form');

@@ -517,7 +517,10 @@
 	var newArrivalsSection = document.querySelector(".new-arrivals-section");
 	if (newArrivalsSection && newArrivals.slides.length <= 1) {
 		newArrivalsSection.classList.add("single-product");
-		newArrivalsSection.querySelector(".discount-slider-navigation").hidden = true;
+		var newArrivalsNavigation = newArrivalsSection.querySelector(".discount-slider-navigation");
+		if (newArrivalsNavigation) {
+			newArrivalsNavigation.hidden = true;
+		}
 	}
 
 	var product = new Swiper(".furuniture-active", {
@@ -822,7 +825,8 @@
 		animated_swiper(sliderActive1, sliderInit1);
 	}
 
-	if (jQuery(".banner-active").length > 0) {
+	function initializeBannerSlider() {
+		if (jQuery(".banner-active").length > 0 && !document.querySelector(".banner-active").swiper) {
 		let sliderActive1 = ".banner-active";
 		let sliderInit1 = new Swiper(sliderActive1, {
 			// Optional parameters
@@ -882,6 +886,10 @@
 
 		animated_swiper(sliderActive1, sliderInit1);
 	}
+	}
+
+	initializeBannerSlider();
+	document.addEventListener("livewire:navigated", initializeBannerSlider);
 
 	var team = new Swiper(".banner-active-grocery", {
 		slidesPerView: 1,

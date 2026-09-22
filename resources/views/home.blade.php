@@ -15,7 +15,7 @@
                            <div class="col-xxl-6 col-lg-6">
                               <div class="banner-content-4 furniture__content">
                                  <span>{{ auth()->user() && auth()->user()->categories() ? 'Recommended For You' : 'Discover Something New' }}</span>
-                                 <h2 class="banner-title-4">{{ $product->name }}</h2>
+                                 <h2 class="banner-title-4">{{ Str::limit($product->name, 30) }}</h2>
                                  <p>{{ $product->description }}</p>
                                  <div class="banner-btn-wrapper furniture__btn-group">
                                     <a class="solid-btn" href="product-details.html">Buy Now<span><i
@@ -489,7 +489,7 @@
       </section>
       <!-- Top stores area end -->
 
-      <!-- Best sell area start -->
+      <!-- Best seller area start -->
       <section class="furniture-seller section-space">
          <div class="container">
             <div class="section-title-wrapper-4 mb-40">
@@ -608,7 +608,7 @@
             </div>
          </div>
       </section>
-      <!-- Best sell area end -->      
+      <!-- Best seller area end -->      
 
       <!-- Testimonial area start -->
       <section class="furniture-testimonial section-space bg-image"

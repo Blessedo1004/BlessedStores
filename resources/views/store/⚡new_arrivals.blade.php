@@ -7,10 +7,12 @@ use App\Services\CartService;
 new class extends Component
 {
     public  $newArrivals;
+    public $quickViewProduct;
+    public bool $removeAlert = false;
 
     public function mount(){
         $query = Product::
-            with('productImages')
+            with('productImages', 'brand', 'categories')
             ->inRandomOrder()
             ->visible()
             ->inStock();
@@ -46,6 +48,12 @@ new class extends Component
         if (app(CartService::class)->add($product)) {
             $this->dispatch('cart-updated');
         }
+    }
+
+    public function showQuickView($slug){
+        $this->quickViewProduct = Product::with('productImages', 'brand', 'categories')
+            ->where('slug', $slug)
+            ->firstOrFail();
     }
 };
 ?>
@@ -93,8 +101,8 @@ new class extends Component
                                                 <span wire:loading wire:target="addToCart">Adding...</span>
                                             </span>
                                         </button>
-                                        <button type="button" class="product-action-btn" data-bs-toggle="modal"
-                                            data-bs-target="#producQuickViewModal">
+                                        <button type="button" class="product-action-btn" wire:click="showQuickView(@js($newArrival->slug))" data-bs-toggle="modal"
+                                            data-bs-target="#newArrivalsQuickViewModal" wire:loading.attr="disabled">
 
                                             <svg width="26" height="18" viewBox="0 0 26 18" fill="none"
                                                 xmlns="http://www.w3.org/2000/svg">
@@ -117,7 +125,7 @@ new class extends Component
                                     </div>
                                     </div>
                                     <div class="product-content text-center">
-                                    <h4 class="product-title"><a href="product-details.html">{{ $newArrival->name }}</a></h4>
+                                    <h4 class="product-title"><a href="product-details.html">{{ Str::limit($newArrival->name, 30) }}</a></h4>
                                     <div class="user-rating">
                                         <i class="fal fa-star"></i>
                                         <i class="fal fa-star"></i>
@@ -135,7 +143,7 @@ new class extends Component
                     </div>
                 </div>
                 @if(session('success'))
-                    <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-7 mx-auto d-block">
+                    <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-6 mx-auto d-block">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
@@ -145,17 +153,138 @@ new class extends Component
                 @endif
 
                 @if(session('error'))
-                    <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-7 mx-auto d-block">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                 <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center {{ $removeAlert ? 'd-none' : '' }}" role="alert" wire:transition>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                        <span>{{session('error')}}</span>
-                    </div>
+                    <ul class="mb-0 ps-2 list-unstyled">
+                            <li>{{ $error }}</li>
+                    </ul>
+                    <button type="button" class="btn btn-link text-danger p-0 ms-auto" aria-label="Dismiss alert" wire:click="$set('removeAlert', true)" wire:loading.attr="disabled">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M6 18L18 6" />
+                        </svg>
+                    </button>
+                </div>
                 @endif
             </div>
         </div>
     </div>
     @endif
+    <div class="product-modal-sm modal fade" id="newArrivalsQuickViewModal" tabindex="-1" wire:ignore.self>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="product-modal">
+                    <div class="product-modal-wrapper p-relative">
+                        <button type="button" class="close product-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fal fa-times"></i>
+                        </button>
+
+                        <div class="modal__inner">
+                            @if($quickViewProduct)
+                                <div class="bd__shop-details-inner">
+                                    <div class="row align-items-center">
+                                        <div class="col-lg-6">
+                                            <div class="product__details-thumb-wrapper d-sm-flex align-items-start">
+                                                <div class="product__details-thumb-tab mr-20">
+                                                    <nav>
+                                                        <div class="nav nav-tabs flex-nowrap flex-sm-column" id="quick-view-images-tab" role="tablist">
+                                                            @foreach($quickViewProduct->productImages as $productImage)
+                                                                <button class="nav-link {{ $loop->first ? 'active' : '' }}" id="quick-view-image-{{ $productImage->id }}-tab" data-bs-toggle="tab" data-bs-target="#quick-view-image-{{ $productImage->id }}" type="button" role="tab" aria-controls="quick-view-image-{{ $productImage->id }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}">
+                                                                    <img src="{{ asset('storage/' . $productImage->image) }}" alt="{{ $quickViewProduct->name }} image {{ $loop->iteration }}">
+                                                                </button>
+                                                            @endforeach
+                                                        </div>
+                                                    </nav>
+                                                </div>
+                                                <div class="product__details-thumb-tab-content">
+                                                    <div class="tab-content" id="quick-view-images-content">
+                                                        @foreach($quickViewProduct->productImages as $productImage)
+                                                            <div class="tab-pane fade {{ $loop->first ? 'show active' : '' }}" id="quick-view-image-{{ $productImage->id }}" role="tabpanel" aria-labelledby="quick-view-image-{{ $productImage->id }}-tab">
+                                                                <div class="product__details-thumb-big w-img">
+                                                                    <img src="{{ asset('storage/' . $productImage->image) }}" alt="{{ $quickViewProduct->name }} image {{ $loop->iteration }}">
+                                                                </div>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6">
+                                            <div class="product__details-content">
+                                                <div class="product__details-top d-flex flex-wrap gap-3 align-items-center mb-15">
+                                                    <div class="product__details-tag">
+                                                        <span>{{ $quickViewProduct->brand?->name ?? 'New Arrival' }}</span>
+                                                    </div>
+                                                    <div class="product__details-rating">
+                                                        <i class="fa-solid fa-star"></i>
+                                                        <i class="fa-solid fa-star"></i>
+                                                        <i class="fa-solid fa-star"></i>
+                                                        <i class="fa-solid fa-star"></i>
+                                                        <i class="fa-regular fa-star"></i>
+                                                    </div>
+                                                </div>
+                                                <h3 class="product__details-title">{{ $quickViewProduct->name }}</h3>
+                                                <div class="product__details-price">
+                                                    <span class="new-price">₦{{ number_format($quickViewProduct->price, 2) }}</span>
+                                                </div>
+                                                <p>{{ $quickViewProduct->description }}</p>
+                                                <div class="product__details-action mb-35">
+                                                    <div class="product__quantity">
+                                                        <div class="product-quantity-wrapper">
+                                                            <form action="#" onsubmit="return false;">
+                                                                <button type="button" class="cart-minus" aria-label="Decrease quantity">
+                                                                    <i class="fa-light fa-minus"></i>
+                                                                </button>
+                                                                <input class="cart-input" type="text" value="1" aria-label="Quantity">
+                                                                <button type="button" class="cart-plus" aria-label="Increase quantity">
+                                                                    <i class="fa-light fa-plus"></i>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                    <div class="product__add-cart">
+                                                        <button type="button" class="fill-btn cart-btn" wire:click="addToCart('{{ $quickViewProduct->slug }}')" data-bs-dismiss="modal" wire:loading.attr="disabled">
+                                                            <span class="fill-btn-inner">
+                                                                <span class="fill-btn-normal">Add To Cart<i class="fa-solid fa-basket-shopping"></i></span>
+                                                                <span class="fill-btn-hover">Add To Cart<i class="fa-solid fa-basket-shopping"></i></span>
+                                                            </span>
+                                                        </button>
+                                                    </div>
+                                                    <div class="product__add-wish">
+                                                        <button type="button" class="product__add-wish-btn" aria-label="Add to wishlist" title="Add to wishlist">
+                                                            <i class="fa-solid fa-heart"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="product__details-meta">
+                                                    <div class="sku"><span>SKU:</span> {{ $quickViewProduct->sku ?? 'N/A' }}</div>
+                                                    <div class="categories">
+                                                        <span>Categories:</span>
+                                                        @forelse($quickViewProduct->categories as $category)
+                                                            <span>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</span>
+                                                        @empty
+                                                            <span>N/A</span>
+                                                        @endforelse
+                                                    </div>
+                                                    <div><span>Available:</span> {{ $quickViewProduct->quantity }}</div>
+                                                    <div><span>Weight:</span> {{ $quickViewProduct->weight ?? 'N/A' }}{{ $quickViewProduct->weight ? 'kg' : '' }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="store-info-loading">Loading product details...</div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+
 
 

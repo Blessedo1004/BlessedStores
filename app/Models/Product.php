@@ -36,6 +36,10 @@ class Product extends Model
     public function carts(){
         return $this->hasMany(Cart::class);
     }
+
+    public function wishlists(){
+        return $this->hasMany(Wishlist::class);
+    }
     
     //create slug
     protected static function booted(): void

@@ -34,6 +34,7 @@ class WebController extends Controller
         else{
             $heroProducts = (clone $query)->take(3)->get();
         }
+        
 
         return view('home', compact('heroProducts'));
     }

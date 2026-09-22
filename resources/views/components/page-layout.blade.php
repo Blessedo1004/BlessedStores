@@ -624,7 +624,7 @@
    <script src="{{asset('js/wow.js')}}"></script>
    <script src="{{asset('js/ajax-form.js')}}"></script>
    <script src="{{asset('js/beforeafter.jquery-1.0.0.min.js')}}"></script>
-   <script src="{{asset('js/main.js')}}"></script>
+   <script src="{{asset('js/main.js')}}?v={{ filemtime(public_path('js/main.js')) }}"></script>
 </body>
 
 </html>   
