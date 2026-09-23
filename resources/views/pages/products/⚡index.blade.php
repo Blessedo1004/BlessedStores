@@ -315,7 +315,7 @@ new class extends Component
                             <th>Name</th>
                             <th>Store</th>
                             <th>SKU</th>
-                            <th>Quantity</th>
+                            <th>Available</th>
                             <th>Description</th>
                             <th>Status</th>
                             <th>Visibility</th>
@@ -328,7 +328,11 @@ new class extends Component
                             <td class="fw-semibold text-dark">{{ Str::limit($product->name, 30) }}</td>
                             <td class="fw-semibold text-dark">{{ $product->store->name }}</td>
                             <td class="fw-semibold text-dark">{{ $product->sku }}</td>
-                            <td>{{ $product->quantity }}</td>
+                            <td>@if($product->productVariants->isEmpty())
+                                    {{ $product->quantity }}
+                                    @else
+                                    {{ $product->productVariants()->sum('quantity') }}
+                                @endif</td>
                             <td>{{Str::limit($product->description, 50) }}</td>
                             <td>
                                 <span class="status-badge {{ $product->quantity > 0  ? 'bg-success' : 'bg-danger'}}">
@@ -423,7 +427,6 @@ new class extends Component
                                     </div>
                                 </div>
                             @else
-                                <p><strong>Quantity:</strong> {{ $productInfo->quantity }}</p>
                                 <p><strong>Price:</strong> ₦{{ number_format($productInfo->price, 2) }}</p>
                                 <p><strong>Weight:</strong> {{ $productInfo->weight !== null ? $productInfo->weight . 'kg' : 'N/A' }}</p>
                                 <p><strong>SKU:</strong> {{ $productInfo->sku }}</p>

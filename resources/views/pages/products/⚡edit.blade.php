@@ -20,8 +20,8 @@ new class extends Component
 
     public Product $product;
     public string $name = '';
-    public int $quantity;
-    public string $price = '';
+    public ?int $quantity = null;
+    public ?string $price = '';
     public string $description = '';
     public string $sku='';
     public string $weight = '';
@@ -69,6 +69,7 @@ new class extends Component
             $this->variantRows = $product->productVariants->map(function ($variant) {
                 return [
                     'id' => $variant->id,
+                    'row_key' => 'variant-' . $variant->id,
                     'name' => $variant->name,
                     'size_id' => $variant->size_id,
                     'price' => (string) $variant->price,
@@ -79,6 +80,7 @@ new class extends Component
             })->toArray();
         } else {
             $this->variantRows = [[
+                'row_key' => uniqid('new-', true),
                 'name' => '',
                 'size_id' => '',
                 'price' => '',
@@ -172,6 +174,10 @@ new class extends Component
         }
 
         $this->validateOnly($property, $this->rules());
+
+        if (str_starts_with($property, 'variantRows.')) {
+            $this->syncVariantQuantity();
+        }
     }
 
     protected function rules(): array
@@ -253,6 +259,10 @@ new class extends Component
             $rules['variantRows.*.quantity'] = ['required', 'integer', 'min:1'];
             $rules['variantRows.*.weight'] = ['nullable', 'numeric', 'min:0'];
             $rules['variantRows.*.sku'] = ['required', 'string', 'max:100'];
+            $rules['quantity'] = ['nullable'];
+            $rules['price'] = ['nullable'];
+            $rules['weight'] = ['nullable'];
+            $rules['sku'] = ['nullable'];
         }
 
         return $rules;
@@ -305,9 +315,28 @@ new class extends Component
         $this->categoryTerm = '';
     }
 
-    public function removeCategory($index)
+    public function removeCategory(int $index): void
     {
-        unset($this->selectedCategories[$index], $this->selectedCategoryTerms[$index]);
+        $categoryId = (int) ($this->selectedCategories[$index] ?? 0);
+        if (!$categoryId) {
+            return;
+        }
+
+        $categoryIdsToRemove = [$categoryId];
+        $pendingIds = [$categoryId];
+
+        while ($pendingIds !== []) {
+            $childIds = Category::whereIn('parent_id', $pendingIds)->pluck('id')->all();
+            $pendingIds = array_values(array_diff($childIds, $categoryIdsToRemove));
+            $categoryIdsToRemove = array_merge($categoryIdsToRemove, $pendingIds);
+        }
+
+        foreach ($this->selectedCategories as $selectedIndex => $selectedCategoryId) {
+            if (in_array((int) $selectedCategoryId, $categoryIdsToRemove, true)) {
+                unset($this->selectedCategories[$selectedIndex], $this->selectedCategoryTerms[$selectedIndex]);
+            }
+        }
+
         $this->selectedCategories = array_values($this->selectedCategories);
         $this->selectedCategoryTerms = array_values($this->selectedCategoryTerms);
     }
@@ -321,6 +350,7 @@ new class extends Component
     {
         $this->variantRows[] = [
             'id' => null,
+            'row_key' => uniqid('new-', true),
             'name' => '',
             'size_id' => '',
             'price' => '',
@@ -330,19 +360,47 @@ new class extends Component
         ];
     }
 
-    public function removeVariantRow(int $index): void
+    public function updatedHasSizes($hasSizes): void
+    {
+        if ((bool) $hasSizes) {
+            $this->price = '';
+            $this->quantity = collect($this->variantRows)->sum(fn ($variantRow) => (int) ($variantRow['quantity'] ?? 0));
+            $this->weight = '';
+            $this->sku = '';
+            return;
+        }
+
+        $this->variantRows = [[
+            'row_key' => uniqid('new-', true),
+            'name' => '',
+            'size_id' => '',
+            'price' => '',
+            'quantity' => '',
+            'weight' => '',
+            'sku' => '',
+        ]];
+        $this->quantity = null;
+    }
+
+    protected function syncVariantQuantity(): void
+    {
+        if ($this->hasSizes) {
+            $this->quantity = collect($this->variantRows)->sum(fn ($variantRow) => (int) ($variantRow['quantity'] ?? 0));
+        }
+    }
+
+    public function removeVariantRow(string $rowKey): void
     {
         if (count($this->variantRows) <= 1) {
             return;
         }
 
-        $variantId = $this->variantRows[$index]['id'] ?? null;
-        if ($variantId) {
-            ProductVariant::find($variantId)?->delete();
+        foreach ($this->variantRows as $index => $variantRow) {
+            if (($variantRow['row_key'] ?? null) === $rowKey) {
+                unset($this->variantRows[$index]);
+                break;
+            }
         }
-
-        unset($this->variantRows[$index]);
-        $this->variantRows = array_values($this->variantRows);
     }
 
     public function save(){
@@ -376,8 +434,10 @@ new class extends Component
             if (filled($this->name)) {
                 $this->product->name = $this->name;
             }
-            $this->product->price = $this->hasSizes ? 0 : $this->price;
-            $this->product->quantity = $this->hasSizes ? collect($this->variantRows)->sum('quantity') : $this->quantity;
+            $this->product->price = $this->hasSizes ? null : $this->price;
+            $this->product->quantity = $this->hasSizes
+                ? collect($this->variantRows)->sum(fn ($variantRow) => (int) ($variantRow['quantity'] ?? 0))
+                : $this->quantity;
             $this->product->description = $this->description;
             $this->product->visibility = $this->visibility;
             $this->product->store_id = $this->store_id;
@@ -489,20 +549,22 @@ new class extends Component
                         </div>
 
                         <div class="col-12">
-                            <div class="border rounded-4 p-3 bg-light-subtle">
+                            <div class="border rounded-4 p-3 bg-light-subtle d-flex justify-content-between">
                                 <label class="form-label fw-semibold text-dark small mb-3 d-block">Does this product have different variants?</label>
-                                <div class="d-flex flex-column gap-2">
-                                    <label class="d-flex align-items-center gap-2">
-                                        <input type="radio" wire:model.live="hasSizes" value="0">
-                                        <span>No</span>
-                                    </label>
-                                    <label class="d-flex align-items-center gap-2">
+                                <div class="d-flex gap-3">
+                                    <label class="d-flex align-items-center">
                                         <input type="radio" wire:model.live="hasSizes" value="1">
                                         <span>Yes</span>
+                                    </label>
+                                    <label class="d-flex align-items-center">
+                                        <input type="radio" wire:model.live="hasSizes" value="0" checked>
+                                        <span>No</span>
                                     </label>
                                 </div>
                             </div>
                         </div>
+
+                        <span class="store-search-results-status" wire:loading wire:target="hasSizes"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span></span>
 
                         @if(!$hasSizes)
                             <div class="col-12 col-md-6">
@@ -541,7 +603,10 @@ new class extends Component
                                 <div class="border rounded-4 p-3">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <h6 class="fw-semibold mb-0">Variants</h6>
-                                        <button type="button" class="btn btn-sm btn-outline-dark" wire:click="addVariantRow">+ Add another variant</button>
+                                        <button type="button" class="btn btn-sm btn-outline-dark" wire:click="addVariantRow" wire:loading.attr="disabled">
+                                            <span wire:loading wire:target="addVariantRow">Adding...</span>
+                                            <span wire:loading.remove wire:target="addVariantRow">+ Add another variant</span>
+                                        </button>
                                     </div>
 
                                     <div class="table-responsive">
@@ -559,7 +624,7 @@ new class extends Component
                                             </thead>
                                             <tbody>
                                                 @foreach($variantRows as $index => $variantRow)
-                                                    <tr>
+                                                    <tr wire:key="variant-row-{{ $variantRow['row_key'] }}">
                                                         <td>
                                                             <input type="text" wire:model.live.debounce.500ms="variantRows.{{ $index }}.name" placeholder="e.g. Pro 256GB">
                                                             @error('variantRows.' . $index . '.name')
@@ -603,7 +668,14 @@ new class extends Component
                                                         </td>
                                                         <td>
                                                             @if(count($variantRows) > 1)
-                                                                <button type="button" class="btn btn-sm btn-outline-danger" wire:click="removeVariantRow({{ $index }})">Remove</button>
+                                                                <button type="button" class="btn btn-sm btn-outline-danger" wire:click="removeVariantRow('{{ $variantRow['row_key'] }}')" wire:loading.attr="disabled">
+                                                                    <span wire:loading wire:target="removeVariantRow('{{ $variantRow['row_key'] }}')">
+                                                                        Removing...
+                                                                    </span>
+                                                                    <span wire:loading.remove wire:target="removeVariantRow('{{ $variantRow['row_key'] }}')">
+                                                                        Remove
+                                                                    </span>
+                                                                </button>
                                                             @endif
                                                         </td>
                                                     </tr>

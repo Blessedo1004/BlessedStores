@@ -482,19 +482,21 @@
 	var newArrivals = new Swiper(".new-arrivals-active", {
 		slidesPerView: 4,
 		spaceBetween: 15,
-		loop: false,
+		loop: true,
 		watchOverflow: true,
 		roundLengths: true,
 		autoplay: {
 			delay: 3000,
+			disableOnInteraction: false,
+			pauseOnMouseEnter: true,
 		},
 		pagination: {
 			el: ".bd-swiper-dot",
 			clickable: true,
 		},
 		navigation: {
-			nextEl: ".discount-slider-button-prev",
-			prevEl: ".discount-slider-button-next",
+			nextEl: ".new-arrivals-button-next",
+			prevEl: ".new-arrivals-button-prev",
 		},
 		breakpoints: {
 			1200: {

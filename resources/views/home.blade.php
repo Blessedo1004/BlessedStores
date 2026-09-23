@@ -25,10 +25,10 @@
                                  </div>
                               </div>
                            </div>
-                           <div class="col-xxl-5 col-lg-5">
+                           <div class="col-lg-4">
                               <div class="banner-thumb-wrapper-4 p-relative">
                                  <div class="banner-thumb-4 p-relative z-index-1">
-                                    <img src="{{asset('storage/'. $product->productImages[0]->image)}}" alt="{{ $product->name }}">
+                                    <img src="{{asset('storage/'. $product->productImages[0]->image)}}" alt="{{ $product->name }}" class="img-fluid">
                                  </div>
                                  <div class="furniture-circle d-none d-lg-block">
                                     <img src="{{asset('imgs/furniture/banner/circle.png')}}" alt="">

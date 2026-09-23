@@ -39,7 +39,7 @@ new class extends Component
 
         else{
             $this->newArrivals = (clone $query)
-            ->where('created_at', '>=', now()->startOfWeek())
+            ->where('created_at', '>=', now()->startOfMonth())
             ->take(5)
             ->get();
         }
@@ -94,11 +94,11 @@ new class extends Component
         <span class="section-subtitle-4 mb-10">This week</span>
         <h2 class="section-title-4">New Arrivals</h2>
     </div>
-    <div class="discount-main p-relative">
+    <div class="discount-main p-relative new-arrivals-section">
         <div class="discount-slider-navigation furniture__navigation">
-            <button type="button" class="discount-slider-button-prev"><i class="fa-regular fa-angle-left"></i>
+            <button type="button" class="discount-slider-button-prev new-arrivals-button-prev"><i class="fa-regular fa-angle-left"></i>
             </button>
-            <button type="button" class="discount-slider-button-next"><i
+            <button type="button" class="discount-slider-button-next new-arrivals-button-next"><i
                 class="fa-regular fa-angle-right"></i></button>
         </div>
         <div class="row align-items-center">
@@ -108,6 +108,12 @@ new class extends Component
                             @foreach($newArrivals as $newArrival)
                             <div class="swiper-slide" wire:key="new-arrival-{{ $newArrival->id }}">
                                 <div class="product-item furniture__product">
+                                    @if($newArrival->productVariants->isEmpty() && $newArrival->quantity < 10)
+                                        <div class="product-badge">
+                                            <span class="bg-danger">Low Stock</span>
+                                        </div>   
+                                    @endif   
+
                                     <div class="product-thumb theme-bg-2">
                                     <img src="{{ asset('storage/' . $newArrival->productImages[0]->image) }}"
                                             alt="{{ $newArrival->name }}" loading="lazy">
@@ -152,7 +158,7 @@ new class extends Component
                                         <i class="fal fa-star"></i>
                                     </div>
                                     <div class="product-price">
-                                        <span class="product-new-price">₦{{ number_format($newArrival->price, 2) }}</span>
+                                        <span class="product-new-price">₦{{ number_format($newArrival->productVariants->isNotEmpty() ? $newArrival->productVariants->first()->price : $newArrival->price, 2) }}</span>
                                     </div>
                                     </div>
                                 </div>
@@ -167,9 +173,16 @@ new class extends Component
                 @endif
 
                 @if(session('error'))
-                 <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center {{ $removeAlert ? 'd-none' : '' }}" role="alert" wire:transition>
+                 <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center {{ $removeAlert ? 'd-none' : '' }} col-lg-6 mx-auto d-block" role="alert" wire:transition>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
                     <ul class="mb-0 ps-2 list-unstyled"><li>{{ session('error') }}</li></ul>
-                    <button type="button" class="btn btn-link text-danger p-0 ms-auto" aria-label="Dismiss alert" wire:click="$set('removeAlert', true)" wire:loading.attr="disabled">&times;</button>
+                    <button type="button" class="btn btn-link text-danger p-0 ms-auto" aria-label="Dismiss alert" wire:click="$set('removeAlert', true)" wire:loading.attr="disabled">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M6 18L18 6" />
+                        </svg>
+                    </button>
                 </div>
                 @endif
             </div>
@@ -241,16 +254,17 @@ new class extends Component
                                                         <div class="mb-2"><strong>Choose a variant:</strong></div>
                                                         <div class="d-flex flex-wrap gap-2">
                                                             @foreach($quickViewProduct->productVariants as $variant)
-                                                                <button type="button" class="btn btn-sm {{ $selectedVariant && $selectedVariant->id === $variant->id ? 'btn-dark' : 'btn-outline-dark' }}" wire:click="selectQuickViewVariant({{ $variant->id }})">
-                                                                    {{ $variant->name }}{{ $variant->size?->name ? ' (' . $variant->size->name . ')' : '' }}
+                                                                <button type="button" class="btn btn-sm {{ $selectedVariant && $selectedVariant->id === $variant->id ? 'btn-dark' : 'btn-outline-dark' }}" wire:click="selectQuickViewVariant({{ $variant->id }})" wire:loading.attr="disabled" wire:target="selectQuickViewVariant">
+                                                                    {{ $variant->name }}
                                                                 </button>
                                                             @endforeach
                                                         </div>
+                                                        <span class="store-search-results-status" wire:loading wire:target="selectQuickViewVariant"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating variant...</span>
                                                     </div>
                                                 @endif
 
                                                 <div class="product__details-price">
-                                                    <span class="new-price">₦{{ number_format($quickViewPrice, 2) }}</span>
+                                                    <span class="new-price mt-4">₦{{ number_format($quickViewPrice, 2) }}</span>
                                                 </div>
                                                 <p>{{ $quickViewProduct->description }}</p>
                                                 <div class="product__details-action mb-35">
@@ -291,6 +305,9 @@ new class extends Component
                                                     </div>
                                                     <div><span>Available:</span> {{ $quickViewAvailable }}</div>
                                                     <div><span>Weight:</span> {{ $selectedVariant?->weight ?? $quickViewProduct->weight ?? 'N/A' }}{{ ($selectedVariant?->weight ?? $quickViewProduct->weight) ? 'kg' : '' }}</div>
+                                                    @if($selectedVariant->size_id)
+                                                        <div><span>Size:</span> <span class="product-size">{{ $selectedVariant->size->name }}</span></div>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </div>

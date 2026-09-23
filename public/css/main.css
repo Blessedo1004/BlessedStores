@@ -405,6 +405,11 @@ i[class^=flaticon-] {
   position: absolute;
 }
 
+.product-size{
+  text-transform: uppercase;
+  font-weight: normal !important;
+}
+
 .include-bg {
   background-position: center;
   background-size: cover;
