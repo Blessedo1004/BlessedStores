@@ -89,6 +89,7 @@ new class extends Component
     }
 
     public function approveApplication (){
+        $this->removeAlert = false;
         // Authentication check
         if(!Auth::check()){
             $this->redirect(route('login'));
@@ -171,6 +172,7 @@ new class extends Component
     }
 
     public function rejectApplication (){
+        $this->removeAlert = false;
         // Authentication check
         if(!Auth::check()){
             $this->redirect(route('login'));
@@ -225,11 +227,13 @@ new class extends Component
 
     public function updatedStatus()
     {
+        $this->removeAlert = false;
         $this->resetPage();
     }
 
     public function updatedSearchTerm()
     {
+        $this->removeAlert = false;
         $this->resetPage();
     }
 }

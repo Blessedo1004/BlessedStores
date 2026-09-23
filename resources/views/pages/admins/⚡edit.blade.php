@@ -24,6 +24,10 @@ new class extends Component
 
     public function updated($property)
     {
+        if ($property !== 'removeAlert') {
+            $this->removeAlert = false;
+        }
+
         $this->validateOnly($property, $this->rules());
     }
 
@@ -53,6 +57,7 @@ new class extends Component
 
 
     public function save(){
+        $this->removeAlert = false;
         // Authentication check
         if(!Auth::check()){
             $this->redirect(route('login'));

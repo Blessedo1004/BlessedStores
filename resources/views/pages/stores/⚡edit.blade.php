@@ -54,6 +54,10 @@ new class extends Component
 
     public function updated($property)
     {
+        if ($property !== 'removeAlert') {
+            $this->removeAlert = false;
+        }
+
         $this->validateOnly($property, $this->rules());
     }
 
@@ -122,6 +126,7 @@ new class extends Component
 
     public function addSocialMedia()
     {
+        $this->removeAlert = false;
         if (count($this->social_media) >= 5) {
             $this->addError('social_media', 'You may only add up to 5 social media information.');
             return;
@@ -152,6 +157,7 @@ new class extends Component
     }
 
     public function save(){
+        $this->removeAlert = false;
         // Authentication check
         if(!Auth::check()){
             $this->redirect(route('login'));

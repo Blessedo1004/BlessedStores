@@ -92,6 +92,8 @@ new class extends Component
 
     public function addSocialMedia()
     {
+        $this->removeAlert = false;
+        $this->removeAlert = false;
         if (count($this->social_media) >= 5) {
             $this->addError('social_media', 'You may only add up to 5 social media information.');
             return;
@@ -122,6 +124,7 @@ new class extends Component
     }
 
     public function submit(){
+        $this->removeAlert = false;
        if(!Auth::check()){
             return $this->redirect(route('login'));
         }

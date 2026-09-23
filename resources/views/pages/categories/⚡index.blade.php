@@ -31,6 +31,7 @@ new class extends Component
      }
 
     public function delete($slug){
+        $this->removeAlert = false;
         // Authentication check
         if(!Auth::check()){
             $this->redirect(route('login'));
@@ -66,6 +67,7 @@ new class extends Component
 
          public function updatedSearchTerm()
     {
+        $this->removeAlert = false;
         $this->resetPage();
     }
 };

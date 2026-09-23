@@ -35,6 +35,8 @@ new class extends Component
     public array $selectedCategoryTerms = [];
     public int $categoryLoadAmount = 3;
 
+    public bool $removeAlert = false;
+
     // Custom messages only for password fields
     protected $messages = [
         'password.required' => 'Password is required',
@@ -47,6 +49,10 @@ new class extends Component
 
     public function updated($property)
     {
+        if ($property !== 'removeAlert') {
+            $this->removeAlert = false;
+        }
+
         $this->validateOnly($property, $this->rules(), $this->messages);
         if ($property === 'password_confirmation' || ($property === 'password' && $this->password_confirmation !== '')) {
             $this->validateOnly('password_confirmation', $this->rules(), $this->messages);
@@ -98,8 +104,9 @@ new class extends Component
 
     }
 
-    public function signup()
-    {
+     public function signup()
+     {
+         $this->removeAlert = false;
        // Rate limiting 
        $key = 'signup:' . request()->ip();
        
@@ -139,6 +146,7 @@ new class extends Component
     }
 
     public function setCategory(Category $category){
+        $this->removeAlert = false;
         if (count($this->selectedCategories) >= 5) {
             $this->addError('categories', 'You can select a maximum of 5 categories.');
             return;
@@ -188,7 +196,7 @@ new class extends Component
                 ->flatten();
         @endphp
 
-        @if ($rateLimitErrors->isNotEmpty())
+        @if ($rateLimitErrors->isNotEmpty() && !$removeAlert)
             @foreach ($rateLimitErrors as $error)
                 <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center" role="alert">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
@@ -197,6 +205,11 @@ new class extends Component
                     <ul class="mb-0 ps-2 list-unstyled">
                             <li>{{ $error }}</li>
                     </ul>
+                    <button type="button" class="btn btn-link text-danger p-0 ms-auto" aria-label="Dismiss alert" wire:click="$set('removeAlert', true)" wire:loading.attr="disabled">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M6 18L18 6" />
+                        </svg>
+                    </button>
                 </div>
             @endforeach
         @endif

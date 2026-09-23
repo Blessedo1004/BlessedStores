@@ -33,6 +33,7 @@ new class extends Component
 
     public function delete()
     {
+        $this->removeAlert = false;
         if (!Auth::check()) {
             return $this->redirect(route('login'));
         }

@@ -8,6 +8,8 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
+use App\Models\Size;
 use Illuminate\Support\Facades\DB;
 
 new class extends Component
@@ -35,10 +37,59 @@ new class extends Component
     public int $categoryLoadAmount = 3;
     public int $brandLoadAmount = 3;
     public bool $removeAlert = false;
+    public bool $hasSizes = false;
+    public array $variantRows = [];
+
+    public function mount()
+    {
+        $this->variantRows = [[
+            'name' => '',
+            'size_id' => '',
+            'price' => '',
+            'quantity' => '',
+            'weight' => '',
+            'sku' => '',
+        ]];
+    }
+
+    public function addVariantRow(): void
+    {
+        $this->variantRows[] = [
+            'name' => '',
+            'size_id' => '',
+            'price' => '',
+            'quantity' => '',
+            'weight' => '',
+            'sku' => '',
+        ];
+    }
+
+    public function removeVariantRow(int $index): void
+    {
+        if (count($this->variantRows) <= 1) {
+            return;
+        }
+
+        unset($this->variantRows[$index]);
+        $this->variantRows = array_values($this->variantRows);
+    }
 
     protected $messages = [
         'store_id.required' => 'Please select a store from the search results.',
-        'selectedCategories.required' => 'Please select at least one category'
+        'selectedCategories.required' => 'Please select at least one category.',
+        'variantRows.*.name.required' => 'Please type a variant name.',
+        'variantRows.*.price.required' => 'Please type a variant price.',
+        'variantRows.*.price.numeric' => 'Please type a valid variant price.',
+        'variantRows.*.price.min' => 'Variant price cannot be negative.',
+        'variantRows.*.quantity.required' => 'Please type a variant quantity.',
+        'variantRows.*.quantity.integer' => 'Please type a whole number for the variant quantity.',
+        'variantRows.*.quantity.min' => 'Variant quantity must be at least 1.',
+        'variantRows.*.weight.numeric' => 'Please type a valid variant weight.',
+        'variantRows.*.weight.min' => 'Variant weight cannot be negative.',
+        'variantRows.*.sku.required' => 'Please type a variant SKU.',
+        'variantRows.*.sku.max' => 'Variant SKU cannot exceed 100 characters.',
+        'variantRows.*.size_id.integer' => 'Please select a valid size.',
+        'variantRows.*.size_id.distinct' => 'Please choose a different size for each variant.',
     ];
 
     public function with(){
@@ -77,10 +128,13 @@ new class extends Component
             $this->brand_id = null;
         }
 
+        $sizes = Size::orderBy('name')->get();
+
         return compact(
             'stores', 'storesTotal',
             'categories', 'categoriesTotal',
-            'brands', 'brandsTotal'
+            'brands', 'brandsTotal',
+            'sizes'
         );
     }
 
@@ -98,44 +152,22 @@ new class extends Component
 
     public function updated($property)
     {
+        if ($property !== 'removeAlert') {
+            $this->removeAlert = false;
+        }
+
         $this->validateOnly($property, $this->rules());
     }
 
     protected function rules(): array
     {
-        return [
+        $rules = [
             'name' => [
                 'required',
                 'string',
                 'min:3',
                 'max:50',
                 'unique:products,name',
-                'regex:/^[^<>]*$/',
-            ],
-
-            'quantity' => [
-                'required',
-                'integer',
-                'min:1',
-                'regex:/^[^<>]*$/',
-            ],
-            'price' => [
-                'required',
-                'min:0',
-                'decimal:0,2',
-                'regex:/^[^<>]*$/',
-            ],
-            'weight' => [
-                'nullable',
-                'min:0.01',
-                'decimal:0,2',
-                'regex:/^[^<>]*$/',
-            ],
-            'sku' => [
-                'required',
-                'string',
-                'max:100',
-                'unique:products,sku',
                 'regex:/^[^<>]*$/',
             ],
             'description' => [
@@ -169,11 +201,56 @@ new class extends Component
                 'string',
                 'in:draft,published'
             ],
-    ];
+        ];
+
+        if ($this->hasSizes) {
+            $rules['variantRows'] = ['required', 'array', 'min:1'];
+            $rules['variantRows.*.name'] = ['required', 'string', 'max:100', 'distinct'];
+            $rules['variantRows.*.size_id'] = ['nullable', 'integer', 'distinct'];
+            $rules['variantRows.*.price'] = ['required', 'numeric', 'min:0'];
+            $rules['variantRows.*.quantity'] = ['required', 'integer', 'min:1'];
+            $rules['variantRows.*.weight'] = ['nullable', 'numeric', 'min:0'];
+            $rules['variantRows.*.sku'] = ['required', 'string', 'max:100'];
+            $rules['quantity'] = ['nullable'];
+            $rules['price'] = ['nullable'];
+            $rules['sku'] = ['nullable'];
+            $rules['weight'] = ['nullable'];
+
+            return $rules;
+        }
+
+        $rules['quantity'] = [
+            'required',
+            'integer',
+            'min:1',
+            'regex:/^[^<>]*$/',
+        ];
+        $rules['price'] = [
+            'required',
+            'min:0',
+            'decimal:0,2',
+            'regex:/^[^<>]*$/',
+        ];
+        $rules['weight'] = [
+            'nullable',
+            'min:0.01',
+            'decimal:0,2',
+            'regex:/^[^<>]*$/',
+        ];
+        $rules['sku'] = [
+            'required',
+            'string',
+            'max:100',
+            'unique:products,sku',
+            'regex:/^[^<>]*$/',
+        ];
+
+        return $rules;
     }
 
     public function addProductImage()
     {
+        $this->removeAlert = false;
         if (count($this->product_images) >= 5) {
             $this->addError('product_images', 'You may only add up to 5 product images.');
             return;
@@ -181,7 +258,7 @@ new class extends Component
 
         // Validate the image field
         $this->validate([
-            'image' => 'required|image|max:2048',
+            'image' => 'required|mimetypes:image/jpeg,image/png,image/webp,image/avif|max:2048',
         ]);
 
         // Add the image to the product_images array
@@ -232,17 +309,14 @@ new class extends Component
     }
 
     public function save(){
-        // Authentication check
+        $this->removeAlert = false;
         if(!Auth::check()){
             $this->redirect(route('login'));
         }
-
-        // Authorization check
         else if (!auth()->user()->can('store')) {
             abort(403);
         }
 
-        // Rate limiting 
         $user = auth()->user();
         $key = 'create-product:' . $user->id . ':' . request()->ip();
        
@@ -256,27 +330,25 @@ new class extends Component
         return;
        }
 
-        // Allow five requests every five minutes from each IP address plus user id.
         RateLimiter::hit($key, 60 * 5);
 
-        // Validation
         $this->validate($this->rules(), $this->messages);
 
         return DB::transaction(function () {
             $product = new Product();
             $product->name = $this->name;
-            $product->price = $this->price;
-            $product->quantity = $this->quantity;
             $product->description = $this->description;
             $product->store_id = $this->store_id;
+            $product->visibility = $this->visibility;
+            $product->price = $this->hasSizes ? 0 : $this->price;
+            $product->quantity = $this->hasSizes ? collect($this->variantRows)->sum('quantity') : $this->quantity;
+            $product->sku = $this->hasSizes ? (collect($this->variantRows)->first()['sku'] ?? '') : $this->sku;
+            $product->weight = $this->hasSizes
+                ? (($weight = collect($this->variantRows)->first()['weight'] ?? '') !== '' ? (float) $weight : null)
+                : ($this->weight !== '' ? (float) $this->weight : null);
             if($this->brand_id){
                 $product->brand_id = $this->brand_id;   
             }
-            if(filled($this->weight)){
-                $product->weight = $this->weight;   
-            }
-            $product->sku = $this->sku;
-            $product->visibility = $this->visibility;
             $product->save();
             $product->categories()->attach($this->selectedCategories);
 
@@ -287,6 +359,25 @@ new class extends Component
                 $image->image = $path;
                 $image->save();
             }
+
+            if ($this->hasSizes) {
+                foreach ($this->variantRows as $variantRow) {
+                    if (empty($variantRow['name']) || empty($variantRow['sku'])) {
+                        continue;
+                    }
+
+                    ProductVariant::create([
+                        'product_id' => $product->id,
+                        'name' => $variantRow['name'],
+                        'size_id' => $variantRow['size_id'] ?: null,
+                        'price' => (float) $variantRow['price'],
+                        'quantity' => (int) $variantRow['quantity'],
+                        'weight' => $variantRow['weight'] !== '' ? (float) $variantRow['weight'] : null,
+                        'sku' => $variantRow['sku'],
+                    ]);
+                }
+            }
+
             session()->flash('success','Product added successfully');
             return $this->redirect(route('products'), navigate:true);
         });
@@ -296,9 +387,7 @@ new class extends Component
 ?>
 <div class="dashboard-content">
         @php
-            $rateLimitErrors = collect($errors->messages())
-                ->except(['name', 'quantity', 'price','description', 'product_images', 'image', 'store_id', 'selectedCategories', 'brand_id', 'sku', 'weight', 'visibility'])
-                ->flatten();
+            $rateLimitErrors = collect($errors->get('create'));
         @endphp 
         
          @if ($rateLimitErrors->isNotEmpty())
@@ -338,37 +427,132 @@ new class extends Component
                             @enderror
                         </div>
 
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold text-dark small mb-2">Price</label>
-                            <input type="number" placeholder="#6,000" required wire:model.live.debounce.500ms="price" min="0" step="0.01" inputmode="numeric">
-                            @error('price')
-                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
-                            @enderror
+                        <div class="col-12">
+                            <div class="border rounded-4 p-3 bg-light-subtle">
+                                <label class="form-label fw-semibold text-dark small mb-3 d-block">Does this product have different variants?</label>
+                                <div class="d-flex flex-column gap-2">
+                                    <label class="d-flex align-items-center gap-2">
+                                        <input type="radio" wire:model.live="hasSizes" value="0" checked>
+                                        <span>No</span>
+                                    </label>
+                                    <label class="d-flex align-items-center gap-2">
+                                        <input type="radio" wire:model.live="hasSizes" value="1">
+                                        <span>Yes</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold text-dark small mb-2">Quantity</label>
-                            <input type="number" placeholder="30" wire:model.live.debounce.500ms="quantity" min="1" step="1" inputmode="numeric">
-                            @error('quantity')
-                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
+                        @if(!$hasSizes)
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold text-dark small mb-2">Price</label>
+                                <input type="number" placeholder="#6,000" required wire:model.live.debounce.500ms="price" min="0" step="0.01" inputmode="numeric">
+                                @error('price')
+                                    <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold text-dark small mb-2">Weight(kg)</label>
-                            <input type="number" placeholder="not required" wire:model.live.debounce.500ms="weight" min="0" step="0.01" inputmode="numeric">
-                            @error('weight')
-                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold text-dark small mb-2">Quantity</label>
+                                <input type="number" placeholder="30" wire:model.live.debounce.500ms="quantity" min="1" step="1" inputmode="numeric">
+                                @error('quantity')
+                                    <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold text-dark small mb-2">SKU</label>
-                            <input type="text" placeholder="SKU123" required wire:model.live.debounce.500ms="sku">
-                            @error('sku')
-                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold text-dark small mb-2">Weight(kg)</label>
+                                <input type="number" placeholder="optional" wire:model.live.debounce.500ms="weight" min="0" step="0.01" inputmode="numeric">
+                                @error('weight')
+                                    <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold text-dark small mb-2">SKU</label>
+                                <input type="text" placeholder="SKU123" required wire:model.live.debounce.500ms="sku">
+                                @error('sku')
+                                    <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        @else
+                            <div class="col-12">
+                                <div class="border rounded-4 p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="fw-semibold mb-0">Variants</h6>
+                                        <button type="button" class="btn btn-sm btn-outline-dark" wire:click="addVariantRow">+ Add another variant</button>
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table class="table align-middle">
+                                            <thead>
+                                                <tr>
+                                                    <th>Variant name</th>
+                                                    <th>Size (optional)</th>
+                                                    <th>Price</th>
+                                                    <th>Quantity</th>
+                                                    <th>Weight(kg)</th>
+                                                    <th>SKU</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($variantRows as $index => $variantRow)
+                                                    <tr>
+                                                        <td>
+                                                            <input type="text" wire:model.live.debounce.500ms="variantRows.{{ $index }}.name" placeholder="e.g. Pro 256GB">
+                                                            @error('variantRows.' . $index . '.name')
+                                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                                            @enderror
+                                                        </td>
+                                                        <td>
+                                                            <select wire:model.live.debounce.500ms="variantRows.{{ $index }}.size_id">
+                                                                <option value="">None</option>
+                                                                @foreach($sizes as $size)
+                                                                    <option value="{{ $size->id }}">{{ $size->name }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                            @error('variantRows.' . $index . '.size_id')
+                                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                                            @enderror
+                                                        </td>
+                                                        <td>
+                                                            <input type="number" min="0" step="0.01" wire:model.live.debounce.500ms="variantRows.{{ $index }}.price" placeholder="₦">
+                                                            @error('variantRows.' . $index . '.price')
+                                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                                            @enderror
+                                                        </td>
+                                                        <td>
+                                                            <input type="number" min="1" step="1" wire:model.live.debounce.500ms="variantRows.{{ $index }}.quantity" placeholder="Qty">
+                                                            @error('variantRows.' . $index . '.quantity')
+                                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                                            @enderror
+                                                        </td>
+                                                        <td>
+                                                            <input type="number" min="0" step="0.01" wire:model.live.debounce.500ms="variantRows.{{ $index }}.weight" placeholder="optional">
+                                                            @error('variantRows.' . $index . '.weight')
+                                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                                            @enderror
+                                                        </td>
+                                                        <td>
+                                                            <input type="text" wire:model.live.debounce.500ms="variantRows.{{ $index }}.sku" placeholder="SKU">
+                                                            @error('variantRows.' . $index . '.sku')
+                                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                                            @enderror
+                                                        </td>
+                                                        <td>
+                                                            @if(count($variantRows) > 1)
+                                                                <button type="button" class="btn btn-sm btn-outline-danger" wire:click="removeVariantRow({{ $index }})">Remove</button>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
 
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold text-dark small mb-2">Store</label>

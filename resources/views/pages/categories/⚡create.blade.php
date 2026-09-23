@@ -22,10 +22,15 @@ new class extends Component
 
     public function updated($property)
     {
+        if ($property !== 'removeAlert') {
+            $this->removeAlert = false;
+        }
+
         $this->validateOnly($property, $this->rules());
     }
 
     public function setCategory(Category $category){
+        $this->removeAlert = false;
         $this->parent_id = $category->id;
         $this->selectedCategoryTerm = $category->name;
         $this->categoryTerm = '';
@@ -73,6 +78,7 @@ new class extends Component
     }
 
     public function save(){
+        $this->removeAlert = false;
         // Authentication check
         if(!Auth::check()){
             $this->redirect(route('login'));

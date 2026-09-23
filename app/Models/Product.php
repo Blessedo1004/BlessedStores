@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 
 class Product extends Model
 {
-    protected $fillable = ['store_id','user_id', 'name', 'quantity', 'price', 'slug', 'description', 'status', 'weight', 'sku', 'brand_id'];
+    protected $fillable = ['store_id','user_id', 'name', 'quantity', 'price', 'slug', 'description', 'weight', 'sku', 'brand_id'];
 
     public function store(){
         return $this->belongsTo(Store::class);
@@ -40,12 +41,24 @@ class Product extends Model
     public function wishlists(){
         return $this->hasMany(Wishlist::class);
     }
+
+    public function productVariants(){
+        return $this->hasMany(ProductVariant::class);
+    }
     
     //create slug
-    protected static function booted(): void
+    protected static function boot(): void
     {
+        parent::boot();
+
         static::creating(function (Product $product) {
             $product->slug = static::generateUniqueSlug($product->name);
+        });
+
+        static::creating(function (Product $product) {
+            if (Auth::check()) {
+                $product->user_id = Auth::id();
+            }
         });
 
         static::updating(function (Product $product) {
@@ -87,11 +100,13 @@ class Product extends Model
 
     public function scopeInStock($query)
     {
-        return $query->where('status', 'in-stock');
+        return $query->where('quantity', '>', 0);
     }
 
     public function scopeVisible($query)
     {
         return $query->where('visibility', 'published');
     }
+
 }
+

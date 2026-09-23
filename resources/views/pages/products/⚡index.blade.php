@@ -53,7 +53,7 @@ new class extends Component
             $this->category_id = null;
         }
 
-        $query = Product::with('store', 'productImages')
+        $query = Product::with('store', 'productImages', 'productVariants.size')
             ->where('user_id', auth()->user()->id)
             ->when($this->status, function ($query) {
                 $query->where('status', $this->status);
@@ -114,7 +114,7 @@ new class extends Component
         $this->isLoadingInfo = true;
         $this->currentShowSlug = $slug;
 
-        $product = Product::with('productImages')->where('slug' , $slug)->firstOrFail();
+        $product = Product::with('productImages', 'productVariants.size', 'brand', 'categories')->where('slug' , $slug)->firstOrFail();
 
         if ($this->currentShowSlug !== $slug) {
             return;
@@ -133,6 +133,7 @@ new class extends Component
 
 
     public function delete($slug){
+        $this->removeAlert = false;
         // Authentication check
         if(!Auth::check()){
             $this->redirect(route('login'));
@@ -168,11 +169,13 @@ new class extends Component
 
     public function updatedStatus()
     {
+        $this->removeAlert = false;
         $this->resetPage();
     }
 
     public function updatedSearchTerm()
     {
+        $this->removeAlert = false;
         $this->resetPage();
     }
 }
@@ -313,7 +316,6 @@ new class extends Component
                             <th>Store</th>
                             <th>SKU</th>
                             <th>Quantity</th>
-                            <th>Price</th>
                             <th>Description</th>
                             <th>Status</th>
                             <th>Visibility</th>
@@ -327,11 +329,10 @@ new class extends Component
                             <td class="fw-semibold text-dark">{{ $product->store->name }}</td>
                             <td class="fw-semibold text-dark">{{ $product->sku }}</td>
                             <td>{{ $product->quantity }}</td>
-                            <td>₦{{ number_format($product->price, 2) }}</td>
                             <td>{{Str::limit($product->description, 50) }}</td>
                             <td>
-                                <span class="status-badge {{ $product->status === 'in-stock' ? 'bg-success' : 'bg-danger'}}">
-                                    {{ $product->status === "in-stock" ? "In Stock" : "Out of Stock"}}
+                                <span class="status-badge {{ $product->quantity > 0  ? 'bg-success' : 'bg-danger'}}">
+                                    {{ $product->quantity > 0 ? "In Stock" : "Out of Stock"}}
                                 </span>
                             </td>
                             <td>
@@ -399,10 +400,34 @@ new class extends Component
 
                         <div class="store-info-placeholder" wire:transition>
                             <p><strong>Name:</strong> {{ $productInfo->name }}</p>
-                            <p><strong>Quantity:</strong> {{ $productInfo->quantity }}</p>
-                            <p><strong>Price:</strong> ₦{{ number_format($productInfo->price, 2) }}</p>
-                            <p><strong>Weight:</strong> {{ $productInfo->weight }}kg</p>
-                            <p><strong>SKU:</strong> {{ $productInfo->sku }}</p>
+                            @if($productInfo->productVariants->isNotEmpty())
+                                <div class="mb-4">
+                                    <p class="mb-2"><strong>Variants:</strong></p>
+                                    <div class="d-flex flex-column gap-2">
+                                        @foreach($productInfo->productVariants as $variant)
+                                            <div class="border rounded-3 p-3">
+                                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                                    <strong>{{ $variant->name }}</strong>
+                                                    @if($variant->size?->name)
+                                                        <span class="status-badge bg-light text-dark">{{ $variant->size->name }}</span>
+                                                    @endif
+                                                </div>
+                                                <div class="small text-muted d-flex flex-wrap gap-3">
+                                                    <span>Price: ₦{{ number_format($variant->price, 2) }}</span>
+                                                    <span>Quantity: {{ $variant->quantity }}</span>
+                                                    <span>Weight: {{ $variant->weight !== null ? $variant->weight . 'kg' : 'N/A' }}</span>
+                                                    <span>SKU: {{ $variant->sku }}</span>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @else
+                                <p><strong>Quantity:</strong> {{ $productInfo->quantity }}</p>
+                                <p><strong>Price:</strong> ₦{{ number_format($productInfo->price, 2) }}</p>
+                                <p><strong>Weight:</strong> {{ $productInfo->weight !== null ? $productInfo->weight . 'kg' : 'N/A' }}</p>
+                                <p><strong>SKU:</strong> {{ $productInfo->sku }}</p>
+                            @endif
                             <p><strong>Brand:</strong> {{ $productInfo->brand ? $productInfo->brand->name : 'N/A' }}</p>
                             <p><strong>Categories:</strong> 
                                 @foreach($productInfo->categories as $category)
@@ -410,9 +435,7 @@ new class extends Component
                                 @endforeach
                             </p>
                             <p class="mt-4"><strong>Description:</strong> {{ $productInfo->description }}</p>
-                            <p class="mt-4"><strong>Status:</strong> 
-                                <span class="status-badge {{ $productInfo->status === 'in-stock' ? 'bg-success' : 'bg-danger'}}">{{ $productInfo->status === "in-stock" ? "In Stock" : "Out of Stock"}}</span>
-                            </p>
+                            <p class="mt-4"><strong>Available:</strong> {{ $productInfo->quantity > 0 ? $productInfo->quantity : 'Out of stock' }}</p>
                             <p class="mt-4"><strong>Visibility:</strong> 
                                 <span class="status-badge {{ $productInfo->visibility === 'draft' ? 'bg-warning' : 'bg-success'}}">{{ $productInfo->visibility === "draft" ? "Draft" : "Published"}}</span>
                             </p>

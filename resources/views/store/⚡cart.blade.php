@@ -25,25 +25,31 @@ new class extends Component
         $this->cartItems = app(CartService::class)->items();
     }
 
-    public function increaseQuantity(int $productId){
-        $item = $this->cartItems->firstWhere('product_id', $productId);
-        app(CartService::class)->updateQuantity($productId, $item->quantity + 1);
+    public function increaseQuantity(int $productId, ?int $variantId = null){
+        $item = $this->cartItems->first(function ($cartItem) use ($productId, $variantId) {
+            return (int) $cartItem->product_id === $productId && (int) ($cartItem->variant_id ?? 0) === (int) ($variantId ?? 0);
+        });
+
+        $newQuantity = ($item->quantity ?? 1) + 1;
+        app(CartService::class)->updateQuantity($productId, $newQuantity, $variantId);
         $this->dispatch('cart-updated');
     }
 
-    public function decreaseQuantity(int $productId){
-        $item = $this->cartItems->firstWhere('product_id', $productId);
+    public function decreaseQuantity(int $productId, ?int $variantId = null){
+        $item = $this->cartItems->first(function ($cartItem) use ($productId, $variantId) {
+            return (int) $cartItem->product_id === $productId && (int) ($cartItem->variant_id ?? 0) === (int) ($variantId ?? 0);
+        });
 
-        if ($item->quantity <= 1) {
+        if (!$item || $item->quantity <= 1) {
             return;
         }
 
-        app(CartService::class)->updateQuantity($productId, $item->quantity - 1);
+        app(CartService::class)->updateQuantity($productId, $item->quantity - 1, $variantId);
         $this->dispatch('cart-updated');
     }
 
-    public function removeItem(int $productId){
-        app(CartService::class)->remove($productId);
+    public function removeItem(int $productId, ?int $variantId = null){
+        app(CartService::class)->remove($productId, $variantId);
         $this->dispatch('cart-updated');
     }
 
@@ -87,20 +93,28 @@ new class extends Component
                                     alt="{{ $cartItem->product->name }}">
                                 <div class="cart-item__details">
                                     <h5 class="cart-item__name">{{ $cartItem->product->name }}</h5>
-                                    <span class="cart-item__price">₦{{ number_format(($cartItem->product->price * $cartItem->quantity) , 2)  }}</span>
+                                    @if($cartItem->variant_id)
+                                        <div class="small text-muted">
+                                            Variant: {{ $cartItem->variant?->name ?? 'Selected variant' }}
+                                            @if($cartItem->variant?->size?->name)
+                                                ({{ $cartItem->variant->size->name }})
+                                            @endif
+                                        </div>
+                                    @endif
+                                    <span class="cart-item__price">₦{{ number_format(($cartItem->price * $cartItem->quantity), 2) }}</span>
                                 </div>
                                 <div class="cart-item__quantity" aria-label="Quantity for {{ $cartItem->product->name }}">
                                     <div class="product-quantity-form">
-                                        <button type="button" class="cart-quantity-btn cart-minus" aria-label="Decrease quantity" wire:click="decreaseQuantity({{ $cartItem->product_id }})" @disabled($cartItem->quantity === 1) wire:loading.attr="disabled">
+                                        <button type="button" class="cart-quantity-btn cart-minus" aria-label="Decrease quantity" wire:click="decreaseQuantity({{ $cartItem->product_id }}, {{ $cartItem->variant_id ?? 'null' }})" @disabled($cartItem->quantity === 1) wire:loading.attr="disabled">
                                             <i class="far fa-minus"></i>
                                         </button>
                                         <input class="cart-input" type="text" value="{{ $cartItem->quantity }}" aria-label="Quantity">
-                                        <button type="button" class="cart-quantity-btn cart-plus" aria-label="Increase quantity" wire:click="increaseQuantity({{ $cartItem->product_id }})" @disabled($cartItem->quantity === $cartItem->product->quantity) wire:loading.attr="disabled">
+                                        <button type="button" class="cart-quantity-btn cart-plus" aria-label="Increase quantity" wire:click="increaseQuantity({{ $cartItem->product_id }}, {{ $cartItem->variant_id ?? 'null' }})" @disabled($cartItem->variant_id && $cartItem->quantity >= ($cartItem->variant?->quantity ?? 0)) wire:loading.attr="disabled">
                                             <i class="far fa-plus"></i>
                                         </button>
                                     </div>
                                 </div>
-                                <button type="button" class="cart-item__remove" wire:click="removeItem({{ $cartItem->product_id }})" aria-label="Remove {{ $cartItem->product->name }} from cart" title="Remove item" wire:loading.attr="disabled">
+                                <button type="button" class="cart-item__remove" wire:click="removeItem({{ $cartItem->product_id }}, {{ $cartItem->variant_id ?? 'null' }})" aria-label="Remove {{ $cartItem->product->name }} from cart" title="Remove item" wire:loading.attr="disabled">
                                     <i class="fal fa-times"></i>
                                 </button>
                             </div>
@@ -111,7 +125,7 @@ new class extends Component
 
                     <div class="cart-total">
                         <span class="cart-total__label">Total</span>
-                        <strong class="cart-total__amount">₦{{ number_format($cartItems->sum(fn ($cartItem) => $cartItem->product->price * $cartItem->quantity), 2) }}</strong>
+                        <strong class="cart-total__amount">₦{{ number_format($cartItems->sum(fn ($cartItem) => $cartItem->price * $cartItem->quantity), 2) }}</strong>
                     </div>
                 </div>
             </div>

@@ -52,6 +52,10 @@ new class extends Component
 
     public function updated($property)
     {
+        if ($property !== 'removeAlert') {
+            $this->removeAlert = false;
+        }
+
         $this->validateOnly($property, $this->rules());
     }
 
@@ -88,6 +92,7 @@ new class extends Component
     }
 
     public function setCategory(Category $category){
+        $this->removeAlert = false;
         if (count($this->selectedCategories) >= 5) {
             $this->addError('categories', 'You can select a maximum of 5 categories.');
             return;
@@ -116,6 +121,7 @@ new class extends Component
     }
 
     public function save(){
+        $this->removeAlert = false;
         // Authentication check
         if(!Auth::check()){
             $this->redirect(route('login'));

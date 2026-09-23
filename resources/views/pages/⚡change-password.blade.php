@@ -42,6 +42,10 @@ new class extends Component
 
     public function updated($property)
     {
+        if ($property !== 'removeAlert') {
+            $this->removeAlert = false;
+        }
+
         $this->validateOnly($property, $this->rules(), $this->messages);
         if ($property === 'password_confirmation' || ($property === 'password' && $this->password_confirmation !== '')) {
             $this->validateOnly('password_confirmation', $this->rules(), $this->messages);
@@ -75,6 +79,7 @@ new class extends Component
 
 
     public function save(){
+        $this->removeAlert = false;
         // Authentication check
         if(!Auth::check()){
             $this->redirect(route('login'));

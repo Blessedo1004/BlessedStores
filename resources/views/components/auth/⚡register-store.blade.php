@@ -12,7 +12,7 @@ use App\Mail\StorePreApplicationEmail;
 new class extends Component
 {
     use WithFileUploads;
-   #[Layout('components.layouts.auth')] 
+    #[Layout('components.layouts.auth')] 
     #[Title('Store Application')]
 
     public string $owner_name = '';
@@ -25,9 +25,14 @@ new class extends Component
     public string $platform = '';
     public string $user_name = '';
     public array $social_media = [];
+    public bool $removeAlert = false;
 
     public function updated($property)
     {
+        if ($property !== 'removeAlert') {
+            $this->removeAlert = false;
+        }
+
         $this->validateOnly($property, $this->rules());
     }
 
@@ -41,7 +46,6 @@ new class extends Component
                 'max:50',
                 'regex:/^[^<>]*$/',
             ],
-
             'email' => [
                 'required',
                 'email',
@@ -92,6 +96,7 @@ new class extends Component
 
     public function addSocialMedia()
     {
+        $this->removeAlert = false;
         if (count($this->social_media) >= 5) {
             $this->addError('social_media', 'You may only add up to 5 social media information.');
             return;
@@ -122,6 +127,7 @@ new class extends Component
     }
 
     public function verify(){
+        $this->removeAlert = false;
        // Rate limiting 
        $key = 'submit-application:' . request()->ip();
        
@@ -176,13 +182,18 @@ new class extends Component
 
         @if ($rateLimitErrors->isNotEmpty())
             @foreach ($rateLimitErrors as $error)
-                <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center" role="alert">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
+                <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center {{ $removeAlert ? 'd-none' : '' }}" role="alert" wire:transition>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     <ul class="mb-0 ps-2 list-unstyled">
                             <li>{{ $error }}</li>
                     </ul>
+                    <button type="button" class="btn btn-link text-danger p-0 ms-auto" aria-label="Dismiss alert" wire:click="$set('removeAlert', true)" wire:loading.attr="disabled">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M6 18L18 6" />
+                        </svg>
+                    </button>
                 </div>
             @endforeach
         @endif
