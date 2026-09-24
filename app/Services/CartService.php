@@ -39,6 +39,10 @@ class CartService
 
     public function items(): Collection
     {
+        if (!$this->canUseCart()) {
+            return collect();
+        }
+
         $items = collect();
 
         if (auth()->check()) {
@@ -128,6 +132,11 @@ class CartService
 
     public function add(Product $product, int $quantity = 1, ?int $variantId = null): bool
     {
+        if (!$this->canUseCart()) {
+            session()->flash('error', 'Only customers can add products to a cart.');
+            return false;
+        }
+
         if ($quantity < 1) {
             throw ValidationException::withMessages(['quantity' => 'Quantity must be at least 1.']);
         }
@@ -167,6 +176,10 @@ class CartService
 
     public function updateQuantity(int $productId, int $quantity, ?int $variantId = null): void
     {
+        if (!$this->canUseCart()) {
+            return;
+        }
+
         if ($quantity < 1) {
             throw ValidationException::withMessages(['quantity' => 'Quantity must be at least 1.']);
         }
@@ -195,6 +208,10 @@ class CartService
 
     public function remove(int $productId, ?int $variantId = null): void
     {
+        if (!$this->canUseCart()) {
+            return;
+        }
+
         if ($variantId) {
             $this->removeVariant($productId, $variantId);
             return;
@@ -212,6 +229,10 @@ class CartService
 
     public function clear(): void
     {
+        if (!$this->canUseCart()) {
+            return;
+        }
+
         if (auth()->check()) {
             Cart::query()->delete();
         }
@@ -222,6 +243,10 @@ class CartService
 
     public function mergeGuestCart(User $user, ?string $token = null): void
     {
+        if (!$user->can('customer')) {
+            return;
+        }
+
         $token ??= session('cart_token');
 
         if (!$token) {
@@ -392,5 +417,10 @@ class CartService
         return collect(is_array($cart) ? $cart : [])
             ->mapWithKeys(fn ($quantity, $productId) => [(int) $productId => max(1, (int) $quantity)])
             ->all();
+    }
+
+    protected function canUseCart(): bool
+    {
+        return !auth()->check() || auth()->user()->can('customer');
     }
 }

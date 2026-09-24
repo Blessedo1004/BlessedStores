@@ -62,9 +62,9 @@ new class extends Component
                 'regex:/^(?:0\d{10}|\+234\d{10})$/'
             ],
              'logo' => [
-                'required',
-                'image',
-                'max:2048'
+            'required',
+            'mimetypes:image/jpeg,image/png,image/webp,image/avif',
+            'max:2048',
             ],
             'description' => [
                 'required',

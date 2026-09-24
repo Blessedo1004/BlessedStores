@@ -16,6 +16,7 @@ new class extends Component
     public string $name = '';
     public string $email = '';
     public string $status = '';
+    public string $role ='';
     public bool $showModal = false;
     public string $categoryTerm ='';
     public array $selectedCategories = [];
@@ -27,6 +28,7 @@ new class extends Component
         $this->user = auth()->user();
         $this->name = auth()->user()->name;
         $this->status = auth()->user()->status;
+        $this->role = auth()->user()->role;
         if(auth()->user()->categories){
             foreach(auth()->user()->categories as $category){
                 $this->selectedCategories[] = $category->id;
@@ -224,6 +226,11 @@ new class extends Component
                         </div>
 
                         <div class="col-12 col-md-6 d-flex gap-2">
+                            <label class="form-label fw-semibold text-dark small mb-2">Account Type:</label>
+                            <p class="text-capitalize">{{ $role }}</p>
+                        </div>
+
+                        <div class="col-12 col-md-6 d-flex gap-2">
                             <label class="form-label fw-semibold text-dark small mb-2">Status:</label>
                             <p>{{ $status }}</p>
                         </div>
@@ -315,12 +322,6 @@ new class extends Component
                                 </div>
                             </div> 
                        </div>
-   
-
-                           
-                       
-
-
                     </div>
 
                 </form>

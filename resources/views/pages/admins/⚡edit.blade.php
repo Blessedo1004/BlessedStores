@@ -176,8 +176,8 @@ new class extends Component
                                 <div class="col-12 col-sm-6">
                                     <button type="submit" class="fill-btn border-0" wire:loading.attr="disabled">                        
                                             <span class="fill-btn-inner" wire:loading.remove wire:target="save">
-                                                <span class="fill-btn-normal">Update Store Details</span>
-                                                <span class="fill-btn-hover">Update Store Details</span>
+                                                <span class="fill-btn-normal">Update Admin Details</span>
+                                                <span class="fill-btn-hover">Update Admin Details</span>
                                             </span>
 
                                             <span class="fill-btn-inner" wire:loading wire:target="save">
@@ -187,7 +187,7 @@ new class extends Component
                                     </button>
                                 </div>
                                 <div class="col-12 col-sm-6 mt-4 mt-sm-0">
-                                    <a href="{{ route('stores') }}" class="fill-btn-red" wire:navigate>
+                                    <a href="{{ route('admins') }}" class="fill-btn-red" wire:navigate>
                                         <span class="fill-btn-inner">
                                             <span class="fill-btn-normal">Cancel</span>
                                             <span class="fill-btn-hover">Cancel</span>
@@ -197,12 +197,6 @@ new class extends Component
 
                             </div> 
                        </div>
-   
-
-                           
-                       
-
-
                     </div>
 
                 </form>

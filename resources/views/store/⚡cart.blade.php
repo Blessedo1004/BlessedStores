@@ -79,7 +79,7 @@ new class extends Component
                             <h4 class="text-white mb-0">Your Cart</h4>
                         </div>
                         <div class="offcanvas__close">
-                            <button type="button" aria-label="Close cart">
+                            <button type="button" aria-label="Close cart" wire:click="$set('showCartModal', false)">
                                 <i class="fal fa-times"></i>
                             </button>
                         </div>
@@ -94,11 +94,8 @@ new class extends Component
                                 <div class="cart-item__details">
                                     <h5 class="cart-item__name">{{ $cartItem->product->name }}</h5>
                                     @if($cartItem->variant_id)
-                                        <div class="small text-muted">
+                                        <div class="small text-light">
                                             Variant: {{ $cartItem->variant?->name ?? 'Selected variant' }}
-                                            @if($cartItem->variant?->size?->name)
-                                                ({{ $cartItem->variant->size->name }})
-                                            @endif
                                         </div>
                                     @endif
                                     <span class="cart-item__price">₦{{ number_format(($cartItem->price * $cartItem->quantity), 2) }}</span>

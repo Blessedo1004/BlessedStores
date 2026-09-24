@@ -278,7 +278,7 @@ new class extends Component
 
         // Validate the image field
         $this->validate([
-            'image' => 'required|image|max:2048',
+            'image' => 'required|mimetypes:image/jpeg,image/png,image/webp,image/avif|max:2048',
         ]);
 
         // Add the image to the product_images array

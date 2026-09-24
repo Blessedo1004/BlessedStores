@@ -39,7 +39,7 @@ new class extends Component
 
         else{
             $this->newArrivals = (clone $query)
-            ->where('created_at', '>=', now()->startOfMonth())
+            ->where('created_at', '>=', now()->startOfWeek())
             ->take(5)
             ->get();
         }
@@ -117,6 +117,7 @@ new class extends Component
                                     <div class="product-thumb theme-bg-2">
                                     <img src="{{ asset('storage/' . $newArrival->productImages[0]->image) }}"
                                             alt="{{ $newArrival->name }}" loading="lazy">
+                                    @if(auth()->user()?->role === "customer" || !auth()->user())        
                                     <div class="product-action-item">
                                         <button type="button" class="product-action-btn"  wire:click="addToCart(@js($newArrival->slug))" wire:loading.attr="disabled">
                                             <svg width="20" height="22" viewBox="0 0 20 22" fill="none"
@@ -147,6 +148,7 @@ new class extends Component
                                             <span class="product-tooltip">Add To Wishlist</span>
                                         </button>
                                     </div>
+                                    @endif
                                     </div>
                                     <div class="product-content text-center">
                                     <h4 class="product-title"><a href="product-details.html">{{ Str::limit($newArrival->name, 30) }}</a></h4>

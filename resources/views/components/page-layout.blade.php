@@ -176,142 +176,6 @@
    <div class="offcanvas__overlay-white"></div>
    <!-- Offcanvas area start -->
 
-   <!-- Quick view modal area start -->
-   <div class="product-modal-sm modal fade" id="producQuickViewModal" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered">
-         <div class="modal-content">
-            <div class="product-modal">
-               <div class="product-modal-wrapper p-relative">
-                  <button type="button" class="close product-modal-close" data-bs-dismiss="modal" aria-label="Close">
-                     <i class="fal fa-times"></i>
-                  </button>
-                  <div class="modal__inner">
-                     <div class="bd__shop-details-inner">
-                        <div class="row">
-                           <div class="col-xxl-6 col-lg-6">
-                              <div class="product__details-thumb-wrapper d-sm-flex align-items-start">
-                                 <div class="product__details-thumb-tab mr-20">
-                                    <nav>
-                                       <div class="nav nav-tabs flex-nowrap flex-sm-column" id="nav-tab" role="tablist">
-                                          <button class="nav-link active" id="img-1-tab" data-bs-toggle="tab"
-                                             data-bs-target="#img-1" type="button" role="tab" aria-controls="img-1"
-                                             aria-selected="true">
-                                             <img src="{{asset('imgs/product/details/details-04.png')}}"
-                                                alt="product-sm-thumb">
-                                          </button>
-                                          <button class="nav-link" id="img-2-tab" data-bs-toggle="tab"
-                                             data-bs-target="#img-2" type="button" role="tab" aria-controls="img-3"
-                                             aria-selected="false">
-                                             <img src="{{asset('imgs/product/details/details-05.png')}}"
-                                                alt="product-sm-thumb">
-                                          </button>
-                                          <button class="nav-link" id="img-3-tab" data-bs-toggle="tab"
-                                             data-bs-target="#img-3" type="button" role="tab" aria-controls="img-3"
-                                             aria-selected="false">
-                                             <img src="{{asset('imgs/product/details/details-06.png')}}"
-                                                alt="product-sm-thumb">
-                                          </button>
-                                       </div>
-                                    </nav>
-                                 </div>
-                                 <div class="product__details-thumb-tab-content">
-                                    <div class="tab-content" id="productthumbcontent">
-                                       <div class="tab-pane fade show active" id="img-1" role="tabpanel"
-                                          aria-labelledby="img-1-tab">
-                                          <div class="product__details-thumb-big w-img">
-                                             <img src="{{asset('imgs/product/details/details-04.png')}}" alt="">
-                                          </div>
-                                       </div>
-                                       <div class="tab-pane fade" id="img-2" role="tabpanel"
-                                          aria-labelledby="img-2-tab">
-                                          <div class="product__details-thumb-big w-img">
-                                             <img src="{{asset('imgs/product/details/details-05.png')}}" alt="">
-                                          </div>
-                                       </div>
-                                       <div class="tab-pane fade" id="img-3" role="tabpanel"
-                                          aria-labelledby="img-3-tab">
-                                          <div class="product__details-thumb-big w-img">
-                                             <img src="{{asset('imgs/product/details/details-06.png')}}" alt="">
-                                          </div>
-                                       </div>
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-                           <div class="col-xxl-6 col-lg-6">
-                              <div class="product__details-content">
-                                 <div class="product__details-top d-flex flex-wrap gap-3 align-items-center mb-15">
-                                    <div class="product__details-tag">
-                                       <a href="#">Construction</a>
-                                    </div>
-                                    <div class="product__details-rating">
-                                       <a href="#"><i class="fa-solid fa-star"></i></a>
-                                       <a href="#"><i class="fa-solid fa-star"></i></a>
-                                       <a href="#"><i class="fa-regular fa-star"></i></a>
-                                    </div>
-                                    <div class="product__details-review-count">
-                                       <a href="#">10 Reviews</a>
-                                    </div>
-                                 </div>
-                                 <h3 class="product__details-title">Disposable Surgical Face Mask</h3>
-                                 <div class="product__details-price">
-                                    <span class="old-price">$30.35</span>
-                                    <span class="new-price">$19.25</span>
-                                 </div>
-                                 <p>Priyoshop has brought to you the Hijab 3 Pieces Combo Pack PS23. It is a completely
-                                    modern design and you feel comfortable to put on this hijab. Buy it at the best
-                                    price.</p>
-
-                                 <div class="product__details-action mb-35">
-                                    <div class="product__quantity">
-                                       <div class="product-quantity-wrapper">
-                                          <form action="#">
-                                             <button class="cart-minus"><i class="fa-light fa-minus"></i></button>
-                                             <input class="cart-input" type="text" value="1">
-                                             <button class="cart-plus"><i class="fa-light fa-plus"></i></button>
-                                          </form>
-                                       </div>
-                                    </div>
-                                    <div class="product__add-cart">
-                                       <a href="javascript:void(0)" class="fill-btn cart-btn">
-                                          <span class="fill-btn-inner">
-                                             <span class="fill-btn-normal">Add To Cart<i
-                                                   class="fa-solid fa-basket-shopping"></i></span>
-                                             <span class="fill-btn-hover">Add To Cart<i
-                                                   class="fa-solid fa-basket-shopping"></i></span>
-                                          </span>
-                                       </a>
-                                    </div>
-                                    <div class="product__add-wish">
-                                       <a href="#" class="product__add-wish-btn"><i class="fa-solid fa-heart"></i></a>
-                                    </div>
-                                 </div>
-                                 <div class="product__details-meta">
-                                    <div class="sku">
-                                       <span>SKU:</span>
-                                       <a href="#">BO1D0MX8SJ</a>
-                                    </div>
-                                    <div class="categories">
-                                       <span>Categories:</span> <a href="#">Milk,</a> <a href="#">Cream,</a> <a
-                                          href="#">Fermented.</a>
-                                    </div>
-                                    <div class="tag">
-                                       <span>Tags:</span> <a href="#"> Cheese,</a> <a href="#">Custard,</a> <a
-                                          href="#">Frozen</a>
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </div>
-      </div>
-   </div>
-   <!-- Quick view modal area end -->
-
    <!-- Header area start -->
    <header>
       <div class="header">
@@ -431,20 +295,22 @@
                               </button>
                            </form>
                         </div>
-                        <div class="header-action d-flex align-items-center ml-30">
-                           <div class="header-action-item">
-                              <a href="wishlist.html" class="header-action-btn">
-                                 <svg width="23" height="21" viewBox="0 0 23 21" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <path
-                                       d="M21.2743 2.33413C20.6448 1.60193 19.8543 1.01306 18.9596 0.609951C18.0649 0.206838 17.0883 -0.0004864 16.1002 0.00291444C14.4096 -0.0462975 12.7637 0.529279 11.5011 1.61122C10.2385 0.529279 8.59252 -0.0462975 6.90191 0.00291444C5.91383 -0.0004864 4.93727 0.206838 4.04257 0.609951C3.14788 1.01306 2.35732 1.60193 1.72785 2.33413C0.632101 3.61193 -0.514239 5.92547 0.245772 9.69587C1.4588 15.7168 10.5548 20.6578 10.9388 20.8601C11.11 20.9518 11.3028 21 11.4988 21C11.6948 21 11.8875 20.9518 12.0587 20.8601C12.445 20.6534 21.541 15.7124 22.7518 9.69587C23.5164 5.92547 22.37 3.61193 21.2743 2.33413ZM20.4993 9.27583C19.6416 13.5326 13.4074 17.492 11.5011 18.6173C8.81516 17.0587 3.28927 13.1457 2.50856 9.27583C1.91872 6.35103 2.72587 4.65208 3.50773 3.74126C3.9212 3.26166 4.43995 2.87596 5.02678 2.61185C5.6136 2.34774 6.25396 2.21175 6.90191 2.21365C7.59396 2.16375 8.28765 2.2871 8.91534 2.57168C9.54304 2.85626 10.0833 3.29235 10.4835 3.83743C10.5822 4.012 10.7278 4.15794 10.9051 4.26003C11.0824 4.36212 11.2849 4.41662 11.4916 4.41787C11.6983 4.41911 11.9015 4.36704 12.0801 4.26709C12.2587 4.16714 12.4062 4.02296 12.5071 3.84959C12.9065 3.30026 13.448 2.86048 14.0781 2.57361C14.7081 2.28674 15.4051 2.16267 16.1002 2.21365C16.7495 2.21061 17.3915 2.34604 17.9798 2.6102C18.5681 2.87435 19.0881 3.26065 19.5025 3.74126C20.282 4.65208 21.0892 6.35103 20.4993 9.27583Z"
-                                       fill="black" />
-                                 </svg>
-                                 <span class="header-action-badge bg-furniture">3</span>
-                              </a>
+                        @if(auth()->user()?->role === "customer" || !auth()->user())
+                           <div class="header-action d-flex align-items-center ml-30">
+                              <div class="header-action-item">
+                                 <a href="wishlist.html" class="header-action-btn">
+                                    <svg width="23" height="21" viewBox="0 0 23 21" fill="none"
+                                       xmlns="http://www.w3.org/2000/svg">
+                                       <path
+                                          d="M21.2743 2.33413C20.6448 1.60193 19.8543 1.01306 18.9596 0.609951C18.0649 0.206838 17.0883 -0.0004864 16.1002 0.00291444C14.4096 -0.0462975 12.7637 0.529279 11.5011 1.61122C10.2385 0.529279 8.59252 -0.0462975 6.90191 0.00291444C5.91383 -0.0004864 4.93727 0.206838 4.04257 0.609951C3.14788 1.01306 2.35732 1.60193 1.72785 2.33413C0.632101 3.61193 -0.514239 5.92547 0.245772 9.69587C1.4588 15.7168 10.5548 20.6578 10.9388 20.8601C11.11 20.9518 11.3028 21 11.4988 21C11.6948 21 11.8875 20.9518 12.0587 20.8601C12.445 20.6534 21.541 15.7124 22.7518 9.69587C23.5164 5.92547 22.37 3.61193 21.2743 2.33413ZM20.4993 9.27583C19.6416 13.5326 13.4074 17.492 11.5011 18.6173C8.81516 17.0587 3.28927 13.1457 2.50856 9.27583C1.91872 6.35103 2.72587 4.65208 3.50773 3.74126C3.9212 3.26166 4.43995 2.87596 5.02678 2.61185C5.6136 2.34774 6.25396 2.21175 6.90191 2.21365C7.59396 2.16375 8.28765 2.2871 8.91534 2.57168C9.54304 2.85626 10.0833 3.29235 10.4835 3.83743C10.5822 4.012 10.7278 4.15794 10.9051 4.26003C11.0824 4.36212 11.2849 4.41662 11.4916 4.41787C11.6983 4.41911 11.9015 4.36704 12.0801 4.26709C12.2587 4.16714 12.4062 4.02296 12.5071 3.84959C12.9065 3.30026 13.448 2.86048 14.0781 2.57361C14.7081 2.28674 15.4051 2.16267 16.1002 2.21365C16.7495 2.21061 17.3915 2.34604 17.9798 2.6102C18.5681 2.87435 19.0881 3.26065 19.5025 3.74126C20.282 4.65208 21.0892 6.35103 20.4993 9.27583Z"
+                                          fill="black" />
+                                    </svg>
+                                    <span class="header-action-badge bg-furniture">3</span>
+                                 </a>
+                              </div>
+                              <livewire:cart/>
                            </div>
-                           <livewire:cart/>
-                        </div>
+                        @endif
                         <div class="header-humbager ml-30">
                            <a class="sidebar__toggle" href="javascript:void(0)">
                               <div class="bar-icon-2">

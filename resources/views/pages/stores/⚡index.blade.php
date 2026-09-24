@@ -170,14 +170,16 @@ new class extends Component
                         <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search stores by name or address" wire:model.live.debounce.500ms="searchTerm" inputmode="search">
                     </div>
 
-                    <div class="col-12 col-md-6 mt-4 mt-lg-0 text-center">
-                        <a class="fill-btn border-0" href="{{ route('stores.register') }}"  wire:navigate>                        
-                            <span class="fill-btn-inner">
-                                <span class="fill-btn-normal">Add Store</span>
-                                <span class="fill-btn-hover">Add Store</span>
-                            </span>
-                        </a>
-                    </div>
+                    @can('store')
+                        <div class="col-12 col-md-6 mt-4 mt-lg-0 text-center">
+                            <a class="fill-btn border-0" href="{{ route('stores.register') }}"  wire:navigate>                        
+                                <span class="fill-btn-inner">
+                                    <span class="fill-btn-normal">Add Store</span>
+                                    <span class="fill-btn-hover">Add Store</span>
+                                </span>
+                            </a>
+                        </div>
+                    @endcan
                 </div>
 
             </div>
