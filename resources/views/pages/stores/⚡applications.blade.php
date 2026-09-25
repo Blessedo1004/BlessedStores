@@ -433,7 +433,7 @@ new class extends Component
                                        <strong>Reason for rejection</strong>
                                     </p>
                                     <textarea rows="3" wire:model.live.debounce.500ms="rejection_reason" class="mt-2"></textarea>
-                                    @error('rejection_reason')
+                                     @error('rejection_reason')
                                         <div class="text-danger mt-1 d-block">{{ $message }}</div>
                                     @enderror
                                     <div class="col-12 col-lg-6 mt-4">

@@ -9,6 +9,7 @@ new class extends Component
     public $cartCount;
     public $cartItems;
     public $showCartModal = false;
+    public int $visibleCartItems = 10;
 
     #[On('cart-updated')]
     public function refreshCart()
@@ -23,6 +24,14 @@ new class extends Component
 
     public function getCartItems(){
         $this->cartItems = app(CartService::class)->items();
+        $this->visibleCartItems = min(max($this->visibleCartItems, 10), $this->cartItems->count());
+    }
+
+    public function loadMoreCartItems(): void
+    {
+        if ($this->visibleCartItems < $this->cartItems->count()) {
+            $this->visibleCartItems = min($this->visibleCartItems + 5, $this->cartItems->count());
+        }
     }
 
     public function increaseQuantity(int $productId, ?int $variantId = null){
@@ -85,8 +94,15 @@ new class extends Component
                         </div>
                     </div>
 
-                    <div class="cart-items-list">
-                        @forelse($cartItems as $cartItem)
+                    <div class="cart-items-list"
+                        x-data="{ loadingMore: false }"
+                        x-on:scroll.throttle.150ms="
+                            if (!loadingMore && $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 24) {
+                                loadingMore = true;
+                                $wire.loadMoreCartItems().finally(() => loadingMore = false);
+                            }
+                        ">
+                        @forelse($cartItems->take($visibleCartItems) as $cartItem)
                             <div class="cart-item" wire:key="cart-item-{{ $cartItem->id }}">
                                 <img class="cart-item__image"
                                     src="{{ asset('storage/' . $cartItem->product->productImages[0]->image) }}"
@@ -106,7 +122,7 @@ new class extends Component
                                             <i class="far fa-minus"></i>
                                         </button>
                                         <input class="cart-input" type="text" value="{{ $cartItem->quantity }}" aria-label="Quantity">
-                                        <button type="button" class="cart-quantity-btn cart-plus" aria-label="Increase quantity" wire:click="increaseQuantity({{ $cartItem->product_id }}, {{ $cartItem->variant_id ?? 'null' }})" @disabled($cartItem->variant_id && $cartItem->quantity >= ($cartItem->variant?->quantity ?? 0)) wire:loading.attr="disabled">
+                                        <button type="button" class="cart-quantity-btn cart-plus" aria-label="Increase quantity" wire:click="increaseQuantity({{ $cartItem->product_id }}, {{ $cartItem->variant_id ?? 'null' }})" @disabled($cartItem->quantity >= $cartItem->product->quantity) wire:loading.attr="disabled">
                                             <i class="far fa-plus"></i>
                                         </button>
                                     </div>
@@ -118,6 +134,16 @@ new class extends Component
                         @empty
                             <p class="cart-empty">Your cart is empty.</p>
                         @endforelse
+
+                        @if($visibleCartItems < $cartItems->count())
+                            <div class="store-search-results-status text-center py-3">
+                                <span wire:loading.remove wire:target="loadMoreCartItems">Scroll to load more</span>
+                                <span wire:loading wire:target="loadMoreCartItems">
+                                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                    Loading more items...
+                                </span>
+                            </div>
+                        @endif
                     </div>
 
                     <div class="cart-total">

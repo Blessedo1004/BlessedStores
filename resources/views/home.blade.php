@@ -1,7 +1,7 @@
 
 <x-page-layout title="Home">
 
-    <x-slot:main>
+    <x-slot:slot>
       <!-- Banner area start -->
       <section class="banner-4 p-relative furniture-banner-area fix bg-image pb-100"
          data-background="{{asset('imgs/furniture/banner/bg.png')}}" data-bg-color="#F5F1E6">

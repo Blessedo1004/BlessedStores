@@ -13,7 +13,7 @@
     border-radius:50%;
 }
 
-.active{
+.step-active{
     background-color: var(--primary-color);
     color: #ffffff;
     font-weight: 600;
@@ -67,6 +67,10 @@ textarea{
 
 .alert{
     z-index:1000;
+}
+
+.product__details-area .alert{
+    z-index: 100;
 }
 
 
@@ -477,8 +481,11 @@ select:focus,
     border-radius: 12px;
     background: #fff;
     box-shadow: var(--card-shadow);
+    z-index: 900;
 }
-
+.store-search-results a{
+    display:block;
+}
 .store-search-results-header {
     display: flex;
     align-items: center;

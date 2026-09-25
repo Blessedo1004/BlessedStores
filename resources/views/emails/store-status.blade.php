@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Store Rejection</title>
+  <title>Store Status</title>
   <style>
     /* Reset */
     body,table,td{margin:0;padding:0;border:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
@@ -30,13 +30,15 @@
         <img class="brand" src="{{ asset('imgs/logo/logo.png') }}" alt="logo">
         <div>
           <div style="font-weight:700;color:#222">BlessedStores</div>
-          <div style="font-size:12px;color:#8b8b8b">Store Rejection</div>
+          <div style="font-size:12px;color:#8b8b8b">Store Status</div>
         </div>
       </div>
 
       <div class="email-content">
-        <p class="lead">Hi {{ $name }}, your application for the store, {{ $store_name }} has been rejected.</p>
-        <p class="lead">The reason for this rejection is : {{$rejection_reason}}</p>
+        <p class="lead">Hi {{ $owner_name }}, your store, {{ $store_name }} has been {{ $status === 'active' ? 'restored'  : $status }}.</p>
+        @if($suspension_reason)
+            <p class="lead">The reason for this suspension is : {{$suspension_reason}}</p>
+        @endif
         <p class="lead">Thank you for choosing BlessedStores!</p>
       </div>
 

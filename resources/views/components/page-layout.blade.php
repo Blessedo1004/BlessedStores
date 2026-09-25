@@ -19,6 +19,8 @@
    <link rel="stylesheet" href="{{asset('css/fontawesome-pro.css')}}">
    <link rel="stylesheet" href="{{asset('css/spacing.css')}}">
    <link rel="stylesheet" href="{{asset('css/main.css')}}">
+
+   @vite(['resources/css/app.css'])
 </head>
 
 <body>
@@ -280,21 +282,7 @@
                         </div>
                      </div>
                      <div class="header-right d-inline-flex align-items-center justify-content-end justify-content-xxl-start">
-                        <div class="header-search  d-xxl-block">
-                           <form action="#">
-                              <input type="text" placeholder="Search for a product...">
-                              <button type="submit">
-                                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M13.4443 13.4445L16.9999 17" stroke="white" stroke-width="2"
-                                       stroke-linecap="round" stroke-linejoin="round" />
-                                    <path
-                                       d="M15.2222 8.11111C15.2222 12.0385 12.0385 15.2222 8.11111 15.2222C4.18375 15.2222 1 12.0385 1 8.11111C1 4.18375 4.18375 1 8.11111 1C12.0385 1 15.2222 4.18375 15.2222 8.11111Z"
-                                       stroke="white" stroke-width="2" />
-                                 </svg>
-                              </button>
-                           </form>
-                        </div>
+                        <livewire:search/>
                         @if(auth()->user()?->role === "customer" || !auth()->user())
                            <div class="header-action d-flex align-items-center ml-30">
                               <div class="header-action-item">
@@ -360,7 +348,7 @@
    <!-- Body main wrapper start -->
    <main>
 
-    {{ $main }}
+    {{ $slot }}
       
    </main>
    <!-- Body main wrapper end -->

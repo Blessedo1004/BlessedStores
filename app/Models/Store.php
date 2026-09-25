@@ -26,6 +26,10 @@ class Store extends Model
         return $this->hasMany(StoreReview::class);
     }
 
+    public function scopeActive($query){
+        return $query->where('status' , 'active');
+    }
+
     //create slug
     protected static function booted(): void
     {

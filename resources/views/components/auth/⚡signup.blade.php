@@ -226,8 +226,8 @@ new class extends Component
                     <h1 class="h4 fw-bold text-dark mb-1" style="font-family: 'Sora', sans-serif;">Create an Account</h1>
                     <p class="text-muted small mb-0">{{ $step === 1 ? 'Fill in the details below to get started' : 'Select product categories you would like to follow (Optional)' }}</p>
                     <div class="d-flex justify-content-center gap-3 mt-4">
-                        <p class="step {{ $step === 1 ? 'active' : ''}}">1</p>
-                        <p class="step {{ $step === 2 ? 'active' : ''}}">2</p>
+                        <p class="step {{ $step === 1 ? 'step-active' : ''}}">1</p>
+                        <p class="step {{ $step === 2 ? 'step-active' : ''}}">2</p>
                     </div>
                 </div>
 

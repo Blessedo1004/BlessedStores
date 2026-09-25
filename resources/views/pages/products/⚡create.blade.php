@@ -136,7 +136,7 @@ new class extends Component
         $brandsTotal = 0;
 
         if(filled($this->storeTerm)){
-            $query = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->storeTerm) . '%')->where('user_id', auth()->user()->id);
+            $query = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->storeTerm) . '%')->where('user_id', auth()->user()->id)->active();
             $storesTotal = $query->count();
             $stores = $query->take($this->storeLoadAmount)->orderBy('name', 'asc')->get(['id', 'name']);
         }
@@ -647,8 +647,6 @@ new class extends Component
                                                 </p>
                                             @endif
                                     </div>
-
-
                                 </div>
                             @endif
                             @error('store_id')

@@ -15,6 +15,7 @@ Route::livewire('/store-preapplication-notice', 'auth.⚡store-preapplication-no
 Route::livewire('/forgot-password', 'auth.⚡forgot-password')->name('forgot-password');
 Route::livewire('/forgot-password-verify', 'auth.⚡forgot-password-verify')->name('forgot-password-verify');
 Route::livewire('/reset-password', 'auth.⚡reset-password')->name('reset-password');
+Route::livewire('/product-details/{slug}', '/⚡product-details')->name('product-details');
 
 Route::middleware('cache.headers:no_store,private')->controller(AuthController::class)->group(function(){
     Route::get('/login','showSignIn')->name('login');

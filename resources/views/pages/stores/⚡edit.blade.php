@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Mail\StoreRegistrationEmail;
+use App\Mail\StoreStatusEmail;
 
 new class extends Component
 {
@@ -31,6 +32,7 @@ new class extends Component
     public string $user_name ;
     public array $social_media;
     public string $status;
+    public string $suspension_reason = '';
     public bool $removeAlert = false;
 
 
@@ -120,6 +122,11 @@ new class extends Component
                 'min:1',
                 'max:5'
             ],
+            'suspension_reason' =>[
+                'nullable',
+                'min:10',
+                'max:50'
+            ]
 
     ];
     }
@@ -216,6 +223,14 @@ new class extends Component
             $this->store->socials()->createMany($this->social_media);
 
             $this->store->save();
+
+            $this->store->load('user');
+            if($this->status == 'active'){
+                Mail::to($this->store->user->email)->send(new StoreStatusEmail($this->store->user->name , $this->store->name , $this->status));
+            }
+            else{
+                Mail::to($this->store->user->email)->send(new StoreStatusEmail($this->store->user->name , $this->store->name , $this->status , $this->suspension_reason ));   
+            }
             session()->flash('success','Store updated successfully');
             return $this->redirect(route('stores'), navigate:true);
         });
@@ -381,21 +396,33 @@ new class extends Component
                             <label class="form-label fw-semibold text-dark small mb-2">Status</label>
                             <div class="d-flex gap-3 align-items-center">
                                 <label class="d-flex align-items-center gap-2">
-                                    <input type="radio" wire:model="status" value="active">
+                                    <input type="radio" wire:model.live="status" value="active">
                                     Active
                                 </label>
                                 <label class="d-flex align-items-center gap-2">
-                                    <input type="radio" wire:model="status" value="suspended">
+                                    <input type="radio" wire:model.live="status" value="suspended">
                                     Suspended
                                 </label>
+                                <span class="store-search-results-status" wire:loading wire:target="status">
+                                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                    Updating status...
+                                </span>
                             </div>
                             @error('status')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
+
+                            @if($status === 'suspended')
+                                    <p class="mt-4">
+                                       <strong>Reason for suspension</strong>
+                                    </p>
+                                    <textarea rows="3" wire:model.live.debounce.500ms="suspension_reason" class="mt-2"></textarea>
+                                     @error('suspension_reason')
+                                        <div class="text-danger mt-1 d-block">{{ $message }}</div>
+                                    @enderror 
+                            @endif
                         </div>    
                     @endcan
-
-
                         <div class="col-12 col-sm-7 text-center mt-4">
                             <div class="row">
                                 <div class="col-12 col-sm-6">
@@ -422,17 +449,8 @@ new class extends Component
 
                             </div> 
                        </div>
-   
-
-                           
-                       
-
-
                     </div>
-
                 </form>
-
             </div>
         </div>
-
 </div>
