@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use App\Services\CartService;
+use App\Services\WishlistService;
 
 new class extends Component
 {
@@ -117,6 +118,7 @@ new class extends Component
         }
 
         $cartToken = session('cart_token');
+        $wishlistToken = session('wishlist_token');
         $user = DB::transaction(function () use ($userData, $key) {
             $user = new User();   
             $user->name = $userData['name'];
@@ -133,6 +135,7 @@ new class extends Component
         });
 
         app(CartService::class)->mergeGuestCart($user, $cartToken);
+        app(WishlistService::class)->mergeGuestWishlist($user, $wishlistToken);
         session()->flash('success', 'Account successfully created. You can now sign in');
         $this->redirect(route('login'));
     }

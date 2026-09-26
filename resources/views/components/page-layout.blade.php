@@ -259,19 +259,8 @@
                                        <a href="{{ route('home') }}">Home</a>
                                     </li>
                                     <li class="has-dropdown">
-                                       <a href="product.html">Shop</a>
-                                       <ul class="submenu">
-                                          <li><a href="product.html">Product</a></li>
-                                          <li><a href="product-details.html">Product Details</a></li>
-                                          <li><a href="wishlist.html">Wishlist</a></li>
-                                          <li><a href="cart.html">Cart</a></li>
-                                          <li><a href="checkout.html">Checkout</a></li>
-                                       </ul>
-                                    </li>
-                                    <li class="has-dropdown">
                                        <a href="about.html">Pages</a>
                                        <ul class="submenu">
-                                          <li><a href="about.html">About Us</a></li>
                                           <li><a href="store.html">Find a Store</a></li>
                                           <li><a href="error.html">404</a></li>
                                        </ul>
@@ -285,6 +274,7 @@
                         <livewire:search/>
                         @if(auth()->user()?->role === "customer" || !auth()->user())
                            <div class="header-action d-flex align-items-center ml-30">
+                              {{--
                               <div class="header-action-item">
                                  <a href="wishlist.html" class="header-action-btn">
                                     <svg width="23" height="21" viewBox="0 0 23 21" fill="none"
@@ -296,6 +286,8 @@
                                     <span class="header-action-badge bg-furniture">3</span>
                                  </a>
                               </div>
+                              --}}
+                              <livewire:wishlist/>
                               <livewire:cart/>
                            </div>
                         @endif

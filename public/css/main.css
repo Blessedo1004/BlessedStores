@@ -401,6 +401,12 @@ i[class^=flaticon-] {
   position: relative;
 }
 
+.see-more{
+  color:var(--clr-theme-primary);
+  font-weight: 600;
+  font-size:large;
+}
+
 .p-absolute {
   position: absolute;
 }

@@ -62,6 +62,15 @@ new class extends Component
             $this->dispatch('cart-updated');
         }
     }
+
+    public function addToWishlist(): void
+    {
+        $product = Product::with('productVariants')->findOrFail($this->product->id);
+
+        if (app(\App\Services\WishlistService::class)->add($product, $this->selectedVariantId)) {
+            $this->dispatch('wishlist-updated');
+        }
+    }
 };
 ?>
 <div>
@@ -192,7 +201,7 @@ new class extends Component
                          </div>
                      @endif
 
-                     <div class="product__details-action mb-35">
+                     <div class="product__details-action mb-35 mt-4">
                         <div class="product__quantity">
                            <div class="product-quantity-wrapper">
                               <button type="button" class="cart-minus" wire:click="decrementQuantity"><i class="fa-light fa-minus"></i></button>
@@ -208,9 +217,11 @@ new class extends Component
                               </span>
                            </button>
                         </div>
-                        <div class="product__add-wish">
-                           <a href="#" class="product__add-wish-btn"><i class="fa-solid fa-heart"></i></a>
-                        </div>
+                        @if(auth()->user()?->role === 'customer' || !auth()->check())
+                           <div class="product__add-wish">
+                              <button type="button" class="product__add-wish-btn" wire:click="addToWishlist" wire:loading.attr="disabled" aria-label="Add to wishlist" title="Add to wishlist"><i class="fa-solid fa-heart"></i></button>
+                           </div>
+                        @endif
                      </div>
                      <div class="product__details-meta mb-20">
                         <div class="sku">
@@ -232,7 +243,7 @@ new class extends Component
                         @if($selectedVariant && $selectedVariant->size_id)
                             <div class="tag">
                                <span>Size:</span>
-                               <span>{{ $selectedVariant->size?->name ?? 'N/A' }}</span>
+                               <span class="text-capitalize">{{ $selectedVariant->size?->name ?? 'N/A' }}</span>
                             </div>
                         @endif
                      </div>

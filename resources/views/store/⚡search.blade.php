@@ -59,7 +59,7 @@ new class extends Component
                         }
                     ">
                         @forelse ($products as $product)
-                            <a href="{{ route('product-details' , $product->slug) }}" class="store-search-result" wire:key="product-search-result-{{ $product->id }}" wire:loading.attr="disabled">{{ $product->name }}</a>
+                            <a href="{{ route('product-details' , $product->slug) }}" class="store-search-result" wire:key="product-search-result-{{ $product->id }}" wire:loading.attr="disabled" wire:navigate>{{ $product->name }}</a>
                             @empty
                             <p class="text-muted text-center py-4 px-4">{{ "No results found for '{$searchTerm}'" }}</p>
                         @endforelse

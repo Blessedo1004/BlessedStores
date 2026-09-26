@@ -493,7 +493,7 @@
       <section class="furniture-seller section-space">
          <div class="container">
             <div class="section-title-wrapper-4 mb-40">
-               <span class="section-subtitle-4 mb-10">THIS Week</span>
+               <span class="section-subtitle-4 mb-10">THIS Month</span>
                <h2 class="section-title-4">Best Sellers</h2>
             </div>
             <div class="row g-4">

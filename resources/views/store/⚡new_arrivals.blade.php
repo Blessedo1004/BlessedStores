@@ -3,10 +3,12 @@
 use Livewire\Component;
 use App\Models\Product;
 use App\Services\CartService;
+use App\Services\WishlistService;
 
 new class extends Component
 {
     public $newArrivals;
+    public $totalNewArrivals;
     public $quickViewProduct;
     public ?int $selectedVariantId = null;
     public int $quickViewQuantity = 1;
@@ -30,6 +32,12 @@ new class extends Component
                 }
             }
 
+            $this->totalNewArrivals = (clone $query)
+            ->whereHas('categories', function ($query) use ($categoryIds) {
+                $query->whereIn('category_id', $categoryIds);
+            })
+            ->where('created_at', '>=', now()->startOfWeek())->get();
+
             $this->newArrivals = (clone $query)
             ->whereHas('categories', function ($query) use ($categoryIds) {
                 $query->whereIn('category_id', $categoryIds);
@@ -38,8 +46,11 @@ new class extends Component
         }
 
         else{
+            $this->totalNewArrivals = (clone $query)
+            ->where('created_at', '>=', now()->startOfMonth())
+            ->get();
             $this->newArrivals = (clone $query)
-            ->where('created_at', '>=', now()->startOfWeek())
+            ->where('created_at', '>=', now()->startOfMonth())
             ->take(5)
             ->get();
         }
@@ -53,6 +64,15 @@ new class extends Component
         }
         if (app(CartService::class)->add($product, $quantity, $variantId)) {
             $this->dispatch('cart-updated');
+        }
+    }
+
+    public function addToWishlist($slug, ?int $variantId = null): void
+    {
+        $product = Product::with('productVariants')->where('slug', $slug)->firstOrFail();
+
+        if (app(WishlistService::class)->add($product, $variantId)) {
+            $this->dispatch('wishlist-updated');
         }
     }
 
@@ -117,6 +137,7 @@ new class extends Component
                                     <div class="product-thumb theme-bg-2">
                                     <img src="{{ asset('storage/' . $newArrival->productImages[0]->image) }}"
                                             alt="{{ $newArrival->name }}" loading="lazy">
+                                            
                                     @if(auth()->user()?->role === "customer" || !auth()->user())        
                                     <div class="product-action-item">
                                         <button type="button" class="product-action-btn"  wire:click="addToCart(@js($newArrival->slug))" wire:loading.attr="disabled">
@@ -140,7 +161,7 @@ new class extends Component
                                             </svg>
                                             <span class="product-tooltip">Quick View</span>
                                         </button>
-                                        <button type="button" class="product-action-btn">
+                                        <button type="button" class="product-action-btn" wire:click="addToWishlist(@js($newArrival->slug))" wire:loading.attr="disabled">
                                             <svg width="21" height="20" viewBox="0 0 21 20" fill="none"
                                                 xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M19.2041 2.63262C18.6402 1.97669 17.932 1.44916 17.1305 1.08804C16.329 0.726918 15.4541 0.54119 14.569 0.544237C13.0545 0.500151 11.58 1.01577 10.4489 1.98501C9.31782 1.01577 7.84334 0.500151 6.32883 0.544237C5.44368 0.54119 4.56885 0.726918 3.76735 1.08804C2.96585 1.44916 2.25764 1.97669 1.69374 2.63262C0.712132 3.77732 -0.314799 5.84986 0.366045 9.22751C1.45272 14.6213 9.60121 19.0476 9.94523 19.2288C10.0986 19.311 10.2713 19.3541 10.4469 19.3541C10.6224 19.3541 10.7951 19.311 10.9485 19.2288C11.2946 19.0436 19.4431 14.6173 20.5277 9.22751C21.2126 5.84986 20.1857 3.77732 19.2041 2.63262ZM18.5099 8.85122C17.7415 12.6646 12.1567 16.2116 10.4489 17.2196C8.04279 15.8234 3.09251 12.318 2.39312 8.85122C1.86472 6.23109 2.5878 4.70912 3.28821 3.89317C3.65861 3.46353 4.12333 3.11801 4.64903 2.88141C5.17473 2.64481 5.74838 2.52299 6.32883 2.52468C6.94879 2.47998 7.57022 2.59049 8.13253 2.84542C8.69484 3.10036 9.17884 3.49102 9.53734 3.97932C9.62575 4.13571 9.75616 4.26645 9.915 4.3579C10.0738 4.44936 10.2553 4.49819 10.4404 4.4993C10.6256 4.50041 10.8076 4.45377 10.9676 4.36423C11.1276 4.27469 11.2598 4.14553 11.3502 3.99022C11.708 3.49811 12.193 3.10414 12.7575 2.84715C13.3219 2.59016 13.9463 2.47902 14.569 2.52468C15.1507 2.52196 15.7257 2.64329 16.2527 2.87993C16.7798 3.11656 17.2456 3.46262 17.6168 3.89317C18.3152 4.70912 19.0383 6.23109 18.5099 8.85122Z" fill="white" />
@@ -168,6 +189,9 @@ new class extends Component
                             @endforeach
                     </div>
                 </div>
+                @if($totalNewArrivals->count() > 5)
+                    <a href="" class="float-end see-more" wire:navigate>See More...</a>
+                @endif
                 @if(session('success'))
                     <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-6 mx-auto d-block">
                         <span>{{session('success')}}</span>
@@ -290,7 +314,7 @@ new class extends Component
                                                         </button>
                                                     </div>
                                                     <div class="product__add-wish">
-                                                        <button type="button" class="product__add-wish-btn" aria-label="Add to wishlist" title="Add to wishlist">
+                                                        <button type="button" class="product__add-wish-btn" wire:click="addToWishlist('{{ $quickViewProduct->slug }}', {{ $selectedVariant?->id ?? 'null' }})" aria-label="Add to wishlist" title="Add to wishlist" wire:loading.attr="disabled">
                                                             <i class="fa-solid fa-heart"></i>
                                                         </button>
                                                     </div>
@@ -325,4 +349,3 @@ new class extends Component
         </div>
     </div>
 </div>
-

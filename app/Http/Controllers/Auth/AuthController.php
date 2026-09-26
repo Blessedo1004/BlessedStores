@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Services\CartService;
+use App\Services\WishlistService;
 
 class AuthController extends Controller
 
@@ -21,8 +22,9 @@ class AuthController extends Controller
     }
 
     //sign in
-        public function signIn(Request $request, CartService $cartService){
+        public function signIn(Request $request, CartService $cartService, WishlistService $wishlistService){
             $cartToken = $request->session()->get('cart_token');
+            $wishlistToken = $request->session()->get('wishlist_token');
             $request->validate([
                 'email' => 'required|email',
                 'password' => 'required|string',
@@ -34,6 +36,7 @@ class AuthController extends Controller
                 ];
             if (Auth::attempt($credentials)) {
                 $cartService->mergeGuestCart(Auth::user(), $cartToken);
+                $wishlistService->mergeGuestWishlist(Auth::user(), $wishlistToken);
                 $request->session()->regenerate();
                 // if(Auth::user()->role === 'customer'){
                 //     return redirect()->intended(route('home'))->with('login-success', 'Login Successful');
