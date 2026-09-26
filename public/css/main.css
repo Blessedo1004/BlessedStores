@@ -2701,6 +2701,10 @@ PAGINATION CSS START
   -moz-box-shadow: 30px 30px 30px 30px rgba(11, 6, 70, 0.08);
   box-shadow: 30px 30px 30px 30px rgba(11, 6, 70, 0.08);
 }
+.main-menu ul li .submenu , .mean-nav ul li .submenu{
+  max-height: 20vh;
+  overflow-y:auto;
+}
 .main-menu ul li .submenu li {
   display: block;
   width: 100%;

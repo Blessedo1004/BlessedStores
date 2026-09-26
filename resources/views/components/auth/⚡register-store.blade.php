@@ -222,7 +222,7 @@ new class extends Component
                 </div>
 
                 <!-- Signup Form -->
-                <form class="needs-validation" wire:submit="verify" novalidate>
+                <form class="needs-validation" wire:submit="verify">
             
                     <!-- Owner Name -->
                     <div class="mb-3">

@@ -252,22 +252,7 @@
                            </a>
                         </div>
                         <div class="mean__menu-wrapper furniture__menu d-none d-lg-block">
-                           <div class="main-menu">
-                              <nav id="mobile-menu">
-                                 <ul>
-                                    <li class="has-dropdown">
-                                       <a href="{{ route('home') }}">Home</a>
-                                    </li>
-                                    <li class="has-dropdown">
-                                       <a href="about.html">Pages</a>
-                                       <ul class="submenu">
-                                          <li><a href="store.html">Find a Store</a></li>
-                                          <li><a href="error.html">404</a></li>
-                                       </ul>
-                                    </li>
-                                 </ul>
-                              </nav>
-                           </div>
+                           <livewire:navigation-categories/>
                         </div>
                      </div>
                      <div class="header-right d-inline-flex align-items-center justify-content-end justify-content-xxl-start">
@@ -308,19 +293,19 @@
                               </button>
                            </div>
                         </div>
-                        <div class="banner-btn-wrapper furniture__btn-group d-none d-xxl-flex ms-auto">
+                        <div class="banner-btn-wrapper furniture__btn-group d-none d-xxl-flex flex-nowrap ms-auto">
                            @auth
                               <a class="solid-btn" href="{{ route('dashboard') }}">
                                  Dashboard
                               </a> 
                               @else
-                              <a class="solid-btn" href="{{ route('signUp') }}">
+                              <a class="solid-btn text-nowrap" href="{{ route('signUp') }}">
                                  Sign Up
                                  <span>
                                     <i class="fa-regular fa-angle-right"></i>
                                  </span>
                               </a>
-                              <a class="border__btn-banner" href="{{ route('login') }}">
+                              <a class="border__btn-banner text-nowrap" href="{{ route('login') }}">
                                  Sign In
                                  <span>
                                     <i class="fa-regular fa-angle-right"></i>

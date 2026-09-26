@@ -4,9 +4,12 @@ use Livewire\Component;
 use App\Models\Product;
 use App\Services\CartService;
 use App\Services\WishlistService;
+use App\Livewire\Concerns\HandlesNewArrivals;
 
 new class extends Component
 {
+    use HandlesNewArrivals;
+
     public $newArrivals;
     public $totalNewArrivals;
     public $quickViewProduct;
@@ -15,45 +18,7 @@ new class extends Component
     public bool $removeAlert = false;
 
     public function mount(){
-        $query = Product::
-            with('productImages', 'brand', 'categories', 'productVariants.size')
-            ->inRandomOrder()
-            ->visible()
-            ->inStock();
-
-        if(auth()->check() && auth()->user()->categories->isNotEmpty()){
-            $categories = auth()->user()->categories()->with('subCategories')->get();
-            $categoryIds = [];
-            foreach($categories as $category){
-                array_push($categoryIds , $category->id);
-                if ($category->subCategories->isNotEmpty()){
-                    $subCategoryIds = $category->subCategories->pluck('id')->toArray();
-                    $categoryIds = array_merge($categoryIds , $subCategoryIds);
-                }
-            }
-
-            $this->totalNewArrivals = (clone $query)
-            ->whereHas('categories', function ($query) use ($categoryIds) {
-                $query->whereIn('category_id', $categoryIds);
-            })
-            ->where('created_at', '>=', now()->startOfWeek())->get();
-
-            $this->newArrivals = (clone $query)
-            ->whereHas('categories', function ($query) use ($categoryIds) {
-                $query->whereIn('category_id', $categoryIds);
-            })
-            ->where('created_at', '>=', now()->startOfWeek())->take(5)->get();
-        }
-
-        else{
-            $this->totalNewArrivals = (clone $query)
-            ->where('created_at', '>=', now()->startOfMonth())
-            ->get();
-            $this->newArrivals = (clone $query)
-            ->where('created_at', '>=', now()->startOfMonth())
-            ->take(5)
-            ->get();
-        }
+        $this->loadNewArrivals();
     }
 
     public function addToCart($slug, ?int $variantId = null, int $quantity = 1){
@@ -135,8 +100,11 @@ new class extends Component
                                     @endif   
 
                                     <div class="product-thumb theme-bg-2">
-                                    <img src="{{ asset('storage/' . $newArrival->productImages[0]->image) }}"
-                                            alt="{{ $newArrival->name }}" loading="lazy">
+                                    <a href="{{ route('product-details' , $newArrival->slug) }}">
+                                        <img src="{{ asset('storage/' . $newArrival->productImages[0]->image) }}"
+                                        alt="{{ $newArrival->name }}" loading="lazy">
+                                    </a>    
+
                                             
                                     @if(auth()->user()?->role === "customer" || !auth()->user())        
                                     <div class="product-action-item">
@@ -190,7 +158,7 @@ new class extends Component
                     </div>
                 </div>
                 @if($totalNewArrivals->count() > 5)
-                    <a href="" class="float-end see-more" wire:navigate>See More...</a>
+                    <a href="{{ route('all-new-arrivals') }}" class="float-end see-more" wire:navigate>See More...</a>
                 @endif
                 @if(session('success'))
                     <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-6 mx-auto d-block">
@@ -331,7 +299,7 @@ new class extends Component
                                                     </div>
                                                     <div><span>Available:</span> {{ $quickViewAvailable }}</div>
                                                     <div><span>Weight:</span> {{ $selectedVariant?->weight ?? $quickViewProduct->weight ?? 'N/A' }}{{ ($selectedVariant?->weight ?? $quickViewProduct->weight) ? 'kg' : '' }}</div>
-                                                    @if($selectedVariant->size_id)
+                                                    @if($selectedVariant && $selectedVariant->size_id !== null && $selectedVariant->size)
                                                         <div><span>Size:</span> <span class="product-size">{{ $selectedVariant->size->name }}</span></div>
                                                     @endif
                                                 </div>

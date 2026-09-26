@@ -69,7 +69,7 @@ textarea{
     z-index:1000;
 }
 
-.product__details-area .alert{
+.product__details-area .alert, .bd-product__area .alert{
     z-index: 100;
 }
 

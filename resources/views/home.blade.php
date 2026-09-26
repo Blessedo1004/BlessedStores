@@ -192,7 +192,7 @@
 
       <!-- New arrivals area start -->
       <section class="discount-area new-arrivals-section p-relative section-space pt-0">
-         <livewire:new_arrivals/>
+         <livewire:new-arrivals/>
       </section>
       <!-- New arrivals area end -->
 

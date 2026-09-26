@@ -41,7 +41,7 @@ class AuthController extends Controller
                 // if(Auth::user()->role === 'customer'){
                 //     return redirect()->intended(route('home'))->with('login-success', 'Login Successful');
                 // }
-                return redirect()->intended(route('dashboard'))->with('login-success', 'Login Successful');
+                return redirect()->intended(route('dashboard', ['navigate' => true]))->with('login-success', 'Login Successful');
             }
 
             return back()

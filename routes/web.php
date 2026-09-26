@@ -16,6 +16,8 @@ Route::livewire('/forgot-password', 'auth.⚡forgot-password')->name('forgot-pas
 Route::livewire('/forgot-password-verify', 'auth.⚡forgot-password-verify')->name('forgot-password-verify');
 Route::livewire('/reset-password', 'auth.⚡reset-password')->name('reset-password');
 Route::livewire('/product-details/{slug}', '.⚡product-details')->name('product-details');
+Route::livewire('/new-arrivals', '.⚡all-new-arrivals')->name('all-new-arrivals');
+Route::livewire('/category-products/{category}', '.⚡category-products')->name('category-products');
 
 Route::middleware('cache.headers:no_store,private')->controller(AuthController::class)->group(function(){
     Route::get('/login','showSignIn')->name('login');
