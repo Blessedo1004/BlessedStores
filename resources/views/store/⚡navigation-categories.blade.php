@@ -23,7 +23,7 @@ new class extends Component
         }
 
         else{
-            $this->userCategories = Category::mainCategory()->inRandomOrder()->orderBy('name')->take(2)->get(['id' , 'name']);
+            $this->userCategories = Category::mainCategory()->orderBy('name')->take(2)->get(['id' , 'name']);
         }
     }
 };
