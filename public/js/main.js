@@ -1063,3 +1063,21 @@
 		window.onload = updateCountdown;
 	}
 })(jQuery);
+
+//Share
+function shareProduct(name, url) {
+    if (navigator.share) {
+        navigator.share({
+            title: name,
+            text: `Check out ${name} on Blessed Store!\n\n${url}`
+        }).catch(error => {
+            if (error.name !== 'AbortError') {
+                console.error('Sharing failed:', error);
+            }
+        });
+    } else {
+        navigator.clipboard.writeText(url)
+            .then(() => alert('Link copied!'))
+            .catch(error => console.error('Could not copy link:', error));
+    }
+}

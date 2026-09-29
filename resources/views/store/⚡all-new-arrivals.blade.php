@@ -80,10 +80,10 @@ new class extends Component
             $this->captureQuickViewAlert($fromQuickView);
             return;
         }
-
         if (app(CartService::class)->add($product, $quantity, $variantId)) {
             $this->dispatch('cart-updated');
         }
+
         $this->captureQuickViewAlert($fromQuickView);
     }
 
@@ -96,6 +96,7 @@ new class extends Component
         if (app(WishlistService::class)->add($product, $variantId)) {
             $this->dispatch('wishlist-updated');
         }
+
         $this->captureQuickViewAlert($fromQuickView);
     }
 
@@ -136,10 +137,18 @@ new class extends Component
             <div class="breadcrumb__wrapper text-center">
                 <h2 class="breadcrumb__title">All New Arrivals</h2>
                 <div class="breadcrumb__menu">
-                    <nav><ul>
-                        <li><span><a href="{{ route('home') }}" wire:navigate>Home</a></span></li>
-                        <li><span>All New Arrivals</span></li>
-                    </ul></nav>
+                    <nav>
+                        <ul>
+                            <li>
+                                <span>
+                                    <a href="{{ route('home') }}" wire:navigate>Home</a>
+                                </span>
+                            </li>
+                            <li>
+                                <span>All New Arrivals</span>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -173,24 +182,35 @@ new class extends Component
 
             <div class="row align-items-center mb-30">
                 <div class="col-xxl-4 col-xl-4 col-lg-4 col-md-6">
-                    <div class="bd-product__result"><h4>{{ $productsCount }} {{ Str::plural('item', $productsCount) }} on list</h4></div>
+                    <div class="bd-product__result">
+                        <h4>{{ $productsCount }} {{ Str::plural('item', $productsCount) }} on list</h4>
+                    </div>
                 </div>
                 <div class="col-xxl-8 col-xl-8 col-lg-8 col-md-6">
                     <div class="product__filter-wrapper d-flex flex-wrap gap-3 align-items-center justify-content-md-end">
                         <div class="product__filter-count d-flex align-items-center gap-2">
                             <div class="btn-dropdown__options">
                                 <select wire:model.live="perPage" aria-label="Products per page">
-                                    <option value="12">Show 12</option><option value="24">Show 24</option><option value="48">Show 48</option>
+                                    <option value="12">Show 12</option>
+                                    <option value="24">Show 24</option>
+                                    <option value="48">Show 48</option>
                                 </select>
                             </div>
                             <div class="btn-dropdown__options">
                                 <select wire:model.live="sortBy" aria-label="Sort products">
-                                    <option value="latest">Latest</option><option value="price_low">Price: low to high</option><option value="price_high">Price: high to low</option><option value="name">Name</option>
+                                    <option value="latest">Latest</option>
+                                    <option value="price_low">Price: low to high</option>
+                                    <option value="price_high">Price: high to low</option>
+                                    <option value="name">Name</option>
                                 </select>
                             </div>
                             <div class="bd-product__filter-style nav nav-tabs" role="tablist">
-                                <button class="nav-link active" id="new-arrivals-grid-tab" data-bs-toggle="tab" data-bs-target="#new-arrivals-grid" type="button" role="tab" aria-label="Grid view"><i class="fa-solid fa-grid"></i></button>
-                                <button class="nav-link" id="new-arrivals-list-tab" data-bs-toggle="tab" data-bs-target="#new-arrivals-list" type="button" role="tab" aria-label="List view"><i class="fa-solid fa-bars"></i></button>
+                                <button class="nav-link active" id="new-arrivals-grid-tab" data-bs-toggle="tab" data-bs-target="#new-arrivals-grid" type="button" role="tab" aria-label="Grid view">
+                                    <i class="fa-solid fa-grid"></i>
+                                </button>
+                                <button class="nav-link" id="new-arrivals-list-tab" data-bs-toggle="tab" data-bs-target="#new-arrivals-list" type="button" role="tab" aria-label="List view">
+                                    <i class="fa-solid fa-bars"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -214,8 +234,9 @@ new class extends Component
                                             <a href="{{ route('product-details', $product->slug) }}" wire:navigate>
                                                 <img src="{{ asset('storage/' . $product->productImages->first()?->image) }}" alt="{{ $product->name }}" loading="lazy">
                                             </a>
-                                            @if(auth()->user()?->role === 'customer' || !auth()->check())
+                                            
                                                 <div class="product-action-item">
+                                                    @if(auth()->user()?->role === 'customer' || !auth()->check())
                                                     <button type="button" class="product-action-btn" wire:click="addToCart(@js($product->slug))" wire:loading.attr="disabled">
                                                         <svg width="20" height="22" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                             <path d="M13.0768 10.1416C13.0768 11.9228 11.648 13.3666 9.88542 13.3666C8.1228 13.3666 6.69401 11.9228 6.69401 10.1416M1.375 5.84163H18.3958M1.375 5.84163V12.2916C1.375 19.1359 2.57494 20.3541 9.88542 20.3541C17.1959 20.3541 18.3958 19.1359 18.3958 12.2916V5.84163M1.375 5.84163L2.91454 2.73011C3.27495 2.00173 4.01165 1.54163 4.81754 1.54163H14.9533C15.7592 1.54163 16.4959 2.00173 16.8563 2.73011L18.3958 5.84163" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -239,8 +260,23 @@ new class extends Component
                                                         </svg>
                                                         <span class="product-tooltip">Add To Wishlist</span>
                                                     </button>
+                                                    @endif
+
+                                                    <button type="button" class="product-action-btn" aria-label="Share" title="Share" onclick="shareProduct(
+                                                        '{{ $product->name }}',
+                                                        '{{ route('product-details', $product->slug) }}'
+                                                    )">
+                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                            <circle cx="18" cy="5" r="3" stroke="white" stroke-width="2" />
+                                                            <circle cx="6" cy="12" r="3" stroke="white" stroke-width="2" />
+                                                            <circle cx="18" cy="19" r="3" stroke="white" stroke-width="2" />
+                                                            <path d="M8.6 10.5L15.4 6.5M8.6 13.5L15.4 17.5" stroke="white" stroke-width="2" stroke-linecap="round" />
+                                                        </svg>
+                                                        <span class="product-tooltip">Share</span>
+                                                    </button>
+
                                                 </div>
-                                            @endif
+                                            
                                         </div>
 
                                         <div class="product-content text-center">
@@ -274,12 +310,18 @@ new class extends Component
                                             </a>
                                         </div>
                                         <div class="product-content py-3">
-                                            <div class="product-tag"><span>{{ $product->brand?->name ?? 'Product' }}</span></div>
+                                            <div class="product-tag">
+                                                <span>{{ $product->brand?->name ?? 'Product' }}</span>
+                                            </div>
                                             <h4 class="product-title"><a href="{{ route('product-details', $product->slug) }}">{{ $product->name }}</a></h4>
                                             <p>{{ Str::limit($product->description, 180) }}</p>
-                                            <div class="product-price"><span class="product-new-price">₦{{ number_format($product->productVariants->first()?->price ?? $product->price, 2) }}</span></div>
+                                            <div class="product-price">
+                                                <span class="product-new-price">₦{{ number_format($product->productVariants->first()?->price ?? $product->price, 2) }}</span>
+                                            </div>
                                             <div class="mt-3 d-flex gap-2">
-                                                <button type="button" class="btn btn-dark btn-sm" wire:click="showQuickView(@js($product->slug))" data-bs-toggle="modal" data-bs-target="#allNewArrivalsQuickViewModal" wire:loading.attr="disabled" wire:target="showQuickView">Quick view</button>
+                                                <button type="button" class="btn btn-dark btn-sm" wire:click="showQuickView(@js($product->slug))" data-bs-toggle="modal" data-bs-target="#allNewArrivalsQuickViewModal" wire:loading.attr="disabled" wire:target="showQuickView">
+                                                    Quick view
+                                                </button>
                                                 <a class="btn btn-outline-dark btn-sm" href="{{ route('product-details', $product->slug) }}">View product</a>
                                             </div>
                                         </div>
@@ -290,40 +332,54 @@ new class extends Component
                     </div>
                 </div>
             </div>
-            <div class="mt-5">{{ $products->links() }}</div>
+            <div class="mt-5">
+                {{ $products->links() }}
+            </div>
         </div>
     </section>
 
     <div class="product-modal-sm modal fade" id="allNewArrivalsQuickViewModal" tabindex="-1" wire:ignore.self>
-        <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><div class="product-modal"><div class="product-modal-wrapper p-relative">
-            <button type="button" class="close product-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="fal fa-times"></i></button>
-            <div class="modal__inner">
-                <div class="store-info-loading" wire:loading wire:target="showQuickView">
-                    <span class="store-search-results-status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Loading product details...</span>
-                </div>
-                <div wire:loading.remove wire:target="showQuickView">
-                @if($quickViewAlertMessage)
-                    @if($quickViewAlertType === 'success')
-                        <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-6 mx-auto d-block align-items-center" wire:transition>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>{{ $quickViewAlertMessage }}</span>
-                        </div>
-                    @else
-                        <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 flex-column flex-lg-row small justify-content-center col-lg-6 mx-auto d-block align-items-center" role="alert" wire:transition>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            <ul class="mb-0 ps-2 list-unstyled"><li>{{ $quickViewAlertMessage }}</li></ul>
-                            <button type="button" class="btn btn-link text-danger" aria-label="Dismiss alert" wire:click="dismissQuickViewAlert" wire:loading.attr="disabled">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M6 18L18 6" />
-                                </svg>
-                            </button>
-                        </div>
-                    @endif
-                @endif
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="product-modal">
+                    <div class="product-modal-wrapper p-relative">
+                        <button type="button" class="close product-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fal fa-times"></i>
+                        </button>
+
+                        <div class="modal__inner">
+                            <div class="store-info-loading" wire:loading wire:target="showQuickView">
+                                <span class="store-search-results-status">
+                                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                    Loading product details...
+                                </span>
+                            </div>
+
+                            <div wire:loading.remove wire:target="showQuickView">
+                                @if($quickViewAlertMessage)
+                                    @if($quickViewAlertType === 'success')
+                                        <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-6 mx-auto d-block align-items-center" wire:transition>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <span>{{ $quickViewAlertMessage }}</span>
+                                        </div>
+                                    @else
+                                        <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 flex-column flex-lg-row small justify-content-center col-lg-6 mx-auto d-block align-items-center" role="alert" wire:transition>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                            <ul class="mb-0 ps-2 list-unstyled">
+                                                <li>{{ $quickViewAlertMessage }}</li>
+                                            </ul>
+                                            <button type="button" class="btn btn-link text-danger" aria-label="Dismiss alert" wire:click="dismissQuickViewAlert" wire:loading.attr="disabled">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M6 18L18 6" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    @endif
+                                @endif
                 @if($quickViewProduct)
                     @php
                         $selectedVariant = $quickViewProduct->productVariants->firstWhere('id', $selectedVariantId);
@@ -334,56 +390,154 @@ new class extends Component
                         <div class="row align-items-center">
                             <div class="col-lg-6">
                                 <div class="product__details-thumb-wrapper d-sm-flex align-items-start">
-                                    <div class="product__details-thumb-tab mr-20"><nav><div class="nav nav-tabs flex-nowrap flex-sm-column" id="all-new-arrivals-images-tab" role="tablist">
-                                        @foreach($quickViewProduct->productImages as $productImage)
-                                            <button class="nav-link {{ $loop->first ? 'active' : '' }}" id="all-new-arrivals-image-{{ $productImage->id }}-tab" data-bs-toggle="tab" data-bs-target="#all-new-arrivals-image-{{ $productImage->id }}" type="button" role="tab" aria-controls="all-new-arrivals-image-{{ $productImage->id }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}"><img src="{{ asset('storage/' . $productImage->image) }}" alt="{{ $quickViewProduct->name }} image {{ $loop->iteration }}"></button>
-                                        @endforeach
-                                    </div></nav></div>
-                                    <div class="product__details-thumb-tab-content"><div class="tab-content" id="all-new-arrivals-images-content">
-                                        @foreach($quickViewProduct->productImages as $productImage)
-                                            <div class="tab-pane fade {{ $loop->first ? 'show active' : '' }}" id="all-new-arrivals-image-{{ $productImage->id }}" role="tabpanel" aria-labelledby="all-new-arrivals-image-{{ $productImage->id }}-tab"><div class="product__details-thumb-big w-img"><img src="{{ asset('storage/' . $productImage->image) }}" alt="{{ $quickViewProduct->name }} image {{ $loop->iteration }}"></div></div>
-                                        @endforeach
-                                    </div></div>
+                                    <div class="product__details-thumb-tab mr-20">
+                                        <nav>
+                                            <div class="nav nav-tabs flex-nowrap flex-sm-column" id="all-new-arrivals-images-tab" role="tablist">
+                                                @foreach($quickViewProduct->productImages as $productImage)
+                                                    <button class="nav-link {{ $loop->first ? 'active' : '' }}" id="all-new-arrivals-image-{{ $productImage->id }}-tab" data-bs-toggle="tab" data-bs-target="#all-new-arrivals-image-{{ $productImage->id }}" type="button" role="tab" aria-controls="all-new-arrivals-image-{{ $productImage->id }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}">
+                                                        <img src="{{ asset('storage/' . $productImage->image) }}" alt="{{ $quickViewProduct->name }} image {{ $loop->iteration }}">
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </nav>
+                                    </div>
+
+                                    <div class="product__details-thumb-tab-content">
+                                        <div class="tab-content" id="all-new-arrivals-images-content">
+                                            @foreach($quickViewProduct->productImages as $productImage)
+                                                <div class="tab-pane fade {{ $loop->first ? 'show active' : '' }}" id="all-new-arrivals-image-{{ $productImage->id }}" role="tabpanel" aria-labelledby="all-new-arrivals-image-{{ $productImage->id }}-tab">
+                                                    <div class="product__details-thumb-big w-img">
+                                                        <img src="{{ asset('storage/' . $productImage->image) }}" alt="{{ $quickViewProduct->name }} image {{ $loop->iteration }}">
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-lg-6"><div class="product__details-content">
-                                <div class="product__details-top d-flex flex-wrap gap-3 align-items-center mb-15"><div class="product__details-tag"><span>{{ $quickViewProduct->brand?->name ?? 'New Arrival' }}</span></div><div class="product__details-rating"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i></div></div>
-                                <h3 class="product__details-title">{{ $quickViewProduct->name }}</h3>
-                                @if($quickViewProduct->productVariants->isNotEmpty())
-                                    <div class="mb-3"><div class="mb-2"><strong>Choose a variant:</strong></div><div class="d-flex flex-wrap gap-2">
-                                        @foreach($quickViewProduct->productVariants as $variant)
-                                            <button type="button" class="btn btn-sm {{ $selectedVariant && $selectedVariant->id === $variant->id ? 'btn-dark' : 'btn-outline-dark' }}" wire:click="selectQuickViewVariant({{ $variant->id }})" wire:loading.attr="disabled" wire:target="selectQuickViewVariant">{{ $variant->name }}</button>
-                                        @endforeach
-                                    </div><span class="store-search-results-status" wire:loading wire:target="selectQuickViewVariant"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Updating variant...</span></div>
-                                @endif
-                                <div class="product__details-price"><span class="new-price mt-4">₦{{ number_format($quickViewPrice, 2) }}</span></div>
-                                <p>{{ $quickViewProduct->description }}</p>
-                                <div class="product__details-action mb-35"><div class="product__quantity"><div class="product-quantity-wrapper">
-                                    <button type="button" class="cart-minus" aria-label="Decrease quantity" wire:click="decrementQuickViewQuantity"><i class="fa-light fa-minus"></i></button>
-                                    <input class="cart-input" type="text" value="{{ $quickViewQuantity }}" aria-label="Quantity" readonly>
-                                    <button type="button" class="cart-plus" aria-label="Increase quantity" wire:click="incrementQuickViewQuantity"><i class="fa-light fa-plus"></i></button>
-                                </div></div>
-                                <div class="product__add-cart"><button type="button" class="fill-btn cart-btn" wire:click="addToCart('{{ $quickViewProduct->slug }}', {{ $selectedVariant?->id ?? 'null' }}, {{ $quickViewQuantity }}, true)" wire:loading.attr="disabled" wire:target="addToCart"><span class="fill-btn-inner"><span class="fill-btn-normal">Add To Cart<i class="fa-solid fa-basket-shopping"></i></span><span class="fill-btn-hover">Add To Cart<i class="fa-solid fa-basket-shopping"></i></span></span></button></div>
-                                <div class="product__add-wish"><button type="button" class="product__add-wish-btn" wire:click="addToWishlist('{{ $quickViewProduct->slug }}', {{ $selectedVariant?->id ?? 'null' }}, true)" aria-label="Add to wishlist" title="Add to wishlist" wire:loading.attr="disabled" wire:target="addToWishlist"><i class="fa-solid fa-heart"></i></button></div></div>
-                                <div class="product__details-meta">                        
-                                    <div class="store">
-                                        <span>Posted By:</span>
-                                            <a href="{{ route('store-details' , $quickViewProduct->store->slug) }}" wire:navigate>{{ $quickViewProduct->store->name }}</a>
+                            <div class="col-lg-6">
+                                <div class="product__details-content">
+                                    <div class="product__details-top d-flex flex-wrap gap-3 align-items-center mb-15">
+                                        <div class="product__details-tag">
+                                            <span>{{ $quickViewProduct->brand?->name ?? 'New Arrival' }}</span>
+                                        </div>
+                                        <div class="product__details-rating">
+                                            <i class="fa-solid fa-star"></i>
+                                            <i class="fa-solid fa-star"></i>
+                                            <i class="fa-solid fa-star"></i>
+                                            <i class="fa-solid fa-star"></i>
+                                            <i class="fa-regular fa-star"></i>
+                                        </div>
                                     </div>
-                        <div class="sku"><span>SKU:</span> {{ $selectedVariant?->sku ?? $quickViewProduct->sku ?? 'N/A' }}</div><div class="categories"><span>Categories:</span>@forelse($quickViewProduct->categories as $category)<a href="{{ route('category-products' , $category->id) }}" wire:navigate>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</a>@empty <span>N/A</span>@endforelse</div><div><span>Available:</span> {{ $quickViewAvailable }}</div><div><span>Weight:</span> {{ $selectedVariant?->weight ?? $quickViewProduct->weight ?? 'N/A' }}{{ ($selectedVariant?->weight ?? $quickViewProduct->weight) ? 'kg' : '' }}</div>
-                                    @if($selectedVariant && $selectedVariant->size_id !== null && $selectedVariant->size)<div><span>Size:</span> <span class="product-size">{{ $selectedVariant->size->name }}</span></div>@endif
+
+                                    <h3 class="product__details-title">{{ $quickViewProduct->name }}</h3>
+                                    @if($quickViewProduct->productVariants->isNotEmpty())
+                                        <div class="mb-3">
+                                            <div class="mb-2"><strong>Choose a variant:</strong></div>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach($quickViewProduct->productVariants as $variant)
+                                                    <button type="button" class="btn btn-sm {{ $selectedVariant && $selectedVariant->id === $variant->id ? 'btn-dark' : 'btn-outline-dark' }}" wire:click="selectQuickViewVariant({{ $variant->id }})" wire:loading.attr="disabled" wire:target="selectQuickViewVariant">
+                                                        {{ $variant->name }}
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                            <span class="store-search-results-status" wire:loading wire:target="selectQuickViewVariant">
+                                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                                Updating variant...
+                                            </span>
+                                        </div>
+                                            @endif
+
+                                    <div class="product__details-price">
+                                        <span class="new-price mt-4">₦{{ number_format($quickViewPrice, 2) }}</span>
+                                    </div>
+                                    <p>{{ $quickViewProduct->description }}</p>
+
+                                    
+                                        <div class="product__details-action mb-35">
+                                            @if(auth()->user()?->role === 'customer' || !auth()->check())
+                                            <div class="product__quantity">
+                                                <div class="product-quantity-wrapper">
+                                                    <button type="button" class="cart-minus" aria-label="Decrease quantity" wire:click="decrementQuickViewQuantity">
+                                                        <i class="fa-light fa-minus"></i>
+                                                    </button>
+                                                    <input class="cart-input" type="text" value="{{ $quickViewQuantity }}" aria-label="Quantity" readonly>
+                                                    <button type="button" class="cart-plus" aria-label="Increase quantity" wire:click="incrementQuickViewQuantity">
+                                                        <i class="fa-light fa-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="product__add-cart">
+                                                <button type="button" class="fill-btn cart-btn" wire:click="addToCart('{{ $quickViewProduct->slug }}', {{ $selectedVariant?->id ?? 'null' }}, {{ $quickViewQuantity }}, true)" wire:loading.attr="disabled" wire:target="addToCart">
+                                                    <span class="fill-btn-inner">
+                                                        <span class="fill-btn-normal">Add To Cart<i class="fa-solid fa-basket-shopping"></i></span>
+                                                        <span class="fill-btn-hover">Add To Cart<i class="fa-solid fa-basket-shopping"></i></span>
+                                                    </span>
+                                                </button>
+                                            </div>
+
+                                            <div class="product__add-wish">
+                                                <button type="button" class="product__add-wish-btn" wire:click="addToWishlist('{{ $quickViewProduct->slug }}', {{ $selectedVariant?->id ?? 'null' }}, true)" aria-label="Add to wishlist" title="Add to wishlist" wire:loading.attr="disabled" wire:target="addToWishlist">
+                                                    <i class="fa-solid fa-heart"></i>
+                                                </button>
+                                            </div>
+                                            @endif
+                                            
+                                            <div class="product__share">
+                                                <button type="button" class="product__share-btn" aria-label="Share" title="Share" onclick="shareProduct(
+                                                    '{{ $quickViewProduct->name }}',
+                                                    '{{ route('product-details', $quickViewProduct->slug) }}'
+                                                )"><i class="fa-solid fa-share-nodes"></i></button>
+                                            </div>
+                                        </div>
+
+                                    <div class="product__details-meta">
+                                        <div class="store">
+                                            <span>Posted By:</span>
+                                            <a href="{{ route('store-details', $quickViewProduct->store->slug) }}" wire:navigate>{{ $quickViewProduct->store->name }}</a>
+                                        </div>
+                                        <div class="sku">
+                                            <span>SKU:</span> {{ $selectedVariant?->sku ?? $quickViewProduct->sku ?? 'N/A' }}
+                                        </div>
+                                        <div class="categories">
+                                            <span>Categories:</span>
+                                            @forelse($quickViewProduct->categories as $category)
+                                                <a href="{{ route('category-products', $category->id) }}" wire:navigate>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</a>
+                                            @empty
+                                                <span>N/A</span>
+                                            @endforelse
+                                        </div>
+                                        <div><span>Available:</span> {{ $quickViewAvailable }}</div>
+                                        <div>
+                                            <span>Weight:</span>
+                                            {{ $selectedVariant?->weight ?? $quickViewProduct->weight ?? 'N/A' }}{{ ($selectedVariant?->weight ?? $quickViewProduct->weight) ? 'kg' : '' }}
+                                        </div>
+                                        @if($selectedVariant && $selectedVariant->size_id)
+                                            <div class="size">
+                                                <span>Size:</span>
+                                                <span class="text-capitalize size-value">{{ $selectedVariant->size?->name ?? 'N/A' }}</span>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
-                            </div></div>
+                            </div>
                         </div>
                     </div>
                 @else
                     <div class="store-info-loading">
-                        <span class="store-search-results-status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Loading product details...</span>
+                        <span class="store-search-results-status">
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                            Loading product details...
+                        </span>
                     </div>
                 @endif
-                </div>
             </div>
-        </div></div></div></div>
+        </div>
+    </div>
+    </div>
+    </div>
+    </div>
     </div>
     @endisland
 </div>

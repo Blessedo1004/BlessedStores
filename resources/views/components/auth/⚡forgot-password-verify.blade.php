@@ -37,7 +37,7 @@ new class extends Component
     {
         $this->email = session('email');
         if (!$this->email) {
-            return $this->redirect(route('login'));
+            return $this->redirect(route('login'), navigate:true);
         }
 
         $key = 'resend-code:' . $this->email;

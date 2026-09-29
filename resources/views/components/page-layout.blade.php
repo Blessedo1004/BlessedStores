@@ -94,7 +94,7 @@
             <div class="offcanvas__content">
                <div class="offcanvas__top mb-40 d-flex justify-content-between align-items-center">
                   <div class="offcanvas__logo">
-                     <a href="{{ route('home') }}">
+                     <a href="{{ route('home') }}" wire:navigate>
                         <img src="{{asset('imgs/logo/logo.png')}}" alt="logo not found">
                      </a>
                   </div>

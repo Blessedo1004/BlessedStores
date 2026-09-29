@@ -10355,7 +10355,7 @@ div[class*=col]:last-child .counter-item-2::after {
   margin-left: 0;
   margin-right: 5px;
 }
-.product__add-wish-btn {
+.product__add-wish-btn,  .product__share-btn{
   display: inline-block;
   height: 60px;
   width: 60px;
@@ -10370,7 +10370,7 @@ div[class*=col]:last-child .counter-item-2::after {
   -ms-border-radius: 30px;
   border-radius: 30px;
 }
-.product__add-wish-btn:hover {
+.product__add-wish-btn:hover, .product__share-btn:hover {
   color: var(--clr-common-white);
   border-color: var(--clr-theme-secondary);
   background-color: var(--clr-theme-secondary);
@@ -10485,6 +10485,10 @@ div[class*=col]:last-child .counter-item-2::after {
 .product__details-meta span {
   font-size: 16px;
   font-weight: 700;
+}
+
+.product__details-meta .size .size-value{
+  font-weight:normal;
 }
 .product__details-meta a {
   font-size: 16px;

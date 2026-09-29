@@ -39,7 +39,7 @@ new class extends Component
         $this->removeAlert = false;
         // Authentication check
         if(!Auth::check()){
-            $this->redirect(route('login'));
+            $this->redirect(route('login') , navigate:true);
         }
 
         // Authorization check

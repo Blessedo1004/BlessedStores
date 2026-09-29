@@ -141,9 +141,9 @@ new class extends Component
                                         alt="{{ $newArrival->name }}" loading="lazy">
                                     </a>    
 
-                                            
-                                    @if(auth()->user()?->role === "customer" || !auth()->user())        
+                                                   
                                     <div class="product-action-item">
+                                        @if(auth()->user()?->role === "customer" || !auth()->user()) 
                                         <button type="button" class="product-action-btn"  wire:click="addToCart(@js($newArrival->slug))" wire:loading.attr="disabled">
                                             <svg width="20" height="22" viewBox="0 0 20 22" fill="none"
                                                 xmlns="http://www.w3.org/2000/svg">
@@ -172,8 +172,21 @@ new class extends Component
                                             </svg>
                                             <span class="product-tooltip">Add To Wishlist</span>
                                         </button>
+                                        @endif
+                                        <button type="button" class="product-action-btn" aria-label="Share" title="Share" onclick="shareProduct(
+                                            '{{ $newArrival->name }}',
+                                            '{{ route('product-details', $newArrival->slug) }}'
+                                        )">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                <circle cx="18" cy="5" r="3" stroke="white" stroke-width="2" />
+                                                <circle cx="6" cy="12" r="3" stroke="white" stroke-width="2" />
+                                                <circle cx="18" cy="19" r="3" stroke="white" stroke-width="2" />
+                                                <path d="M8.6 10.5L15.4 6.5M8.6 13.5L15.4 17.5" stroke="white" stroke-width="2" stroke-linecap="round" />
+                                            </svg>
+                                            <span class="product-tooltip">Share</span>
+                                        </button>
                                     </div>
-                                    @endif
+                                    
                                     </div>
                                     <div class="product-content text-center">
                                     <h4 class="product-title"><a href="product-details.html">{{ Str::limit($newArrival->name, 30) }}</a></h4>
@@ -326,7 +339,9 @@ new class extends Component
                                                     <span class="new-price mt-4">₦{{ number_format($quickViewPrice, 2) }}</span>
                                                 </div>
                                                 <p>{{ $quickViewProduct->description }}</p>
+                                                
                                                 <div class="product__details-action mb-35">
+                                                     @if(auth()->user()?->role === 'customer' || !auth()->check())
                                                     <div class="product__quantity">
                                                         <div class="product-quantity-wrapper">
                                                             <button type="button" class="cart-minus" aria-label="Decrease quantity" wire:click="decrementQuickViewQuantity">
@@ -350,6 +365,13 @@ new class extends Component
                                                         <button type="button" class="product__add-wish-btn" wire:click="addToWishlist('{{ $quickViewProduct->slug }}', {{ $selectedVariant?->id ?? 'null' }}, true)" aria-label="Add to wishlist" title="Add to wishlist" wire:loading.attr="disabled" wire:target="addToWishlist">
                                                             <i class="fa-solid fa-heart"></i>
                                                         </button>
+                                                    </div>
+                                                    @endif
+                                                    <div class="product__share">
+                                                        <button type="button" class="product__share-btn" aria-label="Share" title="Share" onclick="shareProduct(
+                                                            '{{ $quickViewProduct->name }}',
+                                                            '{{ route('product-details', $quickViewProduct->slug) }}'
+                                                        )"><i class="fa-solid fa-share-nodes"></i></button>
                                                     </div>
                                                 </div>
                                                 <div class="product__details-meta">

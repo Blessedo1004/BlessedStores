@@ -46,8 +46,8 @@ new class extends Component
       <!-- Product details area start -->
       <div class="product__details-area section-space-medium">
          <div class="container">
-            <div class="row align-items-center">
-               <div class="col-xxl-6 col-lg-6">
+            <div class="row align-items-center d-flex justify-content-center">
+               <div class="col-xxl-4 col-lg-4">
                   <div class="product__details-thumb-big w-img mr-50 text-center">
                      <img src="{{ $store->logo ? asset('storage/' . $store->logo) : asset('imgs/logo/logo.png') }}"
                         alt="{{ $store->name }} logo" style="max-height: 420px; width: 100%; object-fit: contain;">
@@ -99,7 +99,7 @@ new class extends Component
                                  aria-controls="nav-description" aria-selected="true">Description</button>
                               <button class="nav-link" id="nav-additional-tab" data-bs-toggle="tab"
                                  data-bs-target="#nav-additional" type="button" role="tab"
-                                 aria-controls="nav-additional" aria-selected="false">Additional Information </button>
+                                 aria-controls="nav-additional" aria-selected="false">Top Products </button>
                               <button class="nav-link" id="nav-review-tab" data-bs-toggle="tab"
                                  data-bs-target="#nav-review" type="button" role="tab" aria-controls="nav-review"
                                  aria-selected="false">Reviews (3)</button>

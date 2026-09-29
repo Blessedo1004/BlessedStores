@@ -19,11 +19,11 @@ new class extends Component
                     $this->categoryIds[] = $category->parent_id;    
                 }
             }
-            $this->userCategories = Category::whereIn('id' , $this->categoryIds)->orderBy('name')->take(2)->get(['id' , 'name']);
+            $this->userCategories = Category::whereIn('id' , $this->categoryIds)->inRandomOrder()->take(2)->get(['id' , 'name']);
         }
 
         else{
-            $this->userCategories = Category::mainCategory()->orderBy('name')->take(2)->get(['id' , 'name']);
+            $this->userCategories = Category::mainCategory()->inRandomOrder()->take(2)->get(['id' , 'name']);
         }
     }
 };

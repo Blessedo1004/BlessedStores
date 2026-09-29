@@ -168,7 +168,7 @@ new class extends Component
     public function mount()
     {
         if (Auth::check()) {
-            redirect()->route('dashboard');
+            $this->redirect(route('dashboard'), navigate:true);
         }
     }
 
@@ -220,7 +220,7 @@ new class extends Component
                 
                 <!-- Brand Info Header -->
                 <div class="text-center mb-4">
-                    <a href="{{ route('home') }}">
+                    <a href="{{ route('home') }}" wire:navigate>
                         <img src="{{ asset('imgs/logo/logo.png') }}" alt="logo" class="mb-3 logo">
                     </a>
                     <h1 class="h4 fw-bold text-dark mb-1" style="font-family: 'Sora', sans-serif;">Create an Account</h1>

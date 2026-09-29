@@ -207,8 +207,10 @@ new class extends Component
                              </div>
                          </div>
                      @endif
-
+                     
+                     
                      <div class="product__details-action mb-35 mt-4">
+                        @if(auth()->user()?->role === 'customer' || !auth()->check())
                         <div class="product__quantity">
                            <div class="product-quantity-wrapper">
                               <button type="button" class="cart-minus" wire:click="decrementQuantity"><i class="fa-light fa-minus"></i></button>
@@ -224,11 +226,17 @@ new class extends Component
                               </span>
                            </button>
                         </div>
-                        @if(auth()->user()?->role === 'customer' || !auth()->check())
-                           <div class="product__add-wish">
-                              <button type="button" class="product__add-wish-btn" wire:click="addToWishlist" wire:loading.attr="disabled" aria-label="Add to wishlist" title="Add to wishlist"><i class="fa-solid fa-heart"></i></button>
-                           </div>
+                        <div class="product__add-wish">
+                           <button type="button" class="product__add-wish-btn" wire:click="addToWishlist" wire:loading.attr="disabled" aria-label="Add to wishlist" title="Add to wishlist"><i class="fa-solid fa-heart"></i></button>
+                        </div>
                         @endif
+                        <div class="product__share">
+                           <button type="button" class="product__share-btn" aria-label="Share" title="Share" onclick="shareProduct(
+                              '{{ $product->name }}',
+                              '{{ route('product-details', $product->slug) }}'
+                           )"><i class="fa-solid fa-share-nodes"></i></button>
+                        </div>
+
                      </div>
                      <div class="product__details-meta mb-20">
                         <div class="store">
@@ -237,35 +245,35 @@ new class extends Component
                         </div>
                         <div class="sku">
                            <span>SKU:</span>
-                           <span>{{ $selectedVariant?->sku ?? $product->sku ?? 'N/A' }}</span>
+                           {{ $selectedVariant?->sku ?? $product->sku ?? 'N/A' }}
                         </div>
                         <div class="categories">
                            <span>Categories:</span>
                            @forelse($product->categories as $category)
                               <a href="{{ route('category-products' , $category->id) }}" wire:navigate>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</a>
                            @empty
-                               <span>N/A</span>
+                               N/A
                            @endforelse
                         </div>
-                        <div class="tag">
+                        <div class="available">
                            <span>Available:</span>
-                           <span>{{ $availableStock }}</span>
+                           {{ $availableStock }}
                         </div>
                         @if($selectedVariant && $selectedVariant->size_id)
-                            <div class="tag">
+                            <div class="size">
                                <span>Size:</span>
-                               <span class="text-capitalize">{{ $selectedVariant->size?->name ?? 'N/A' }}</span>
+                               <span class="text-capitalize size-value">{{ $selectedVariant->size?->name ?? 'N/A' }}</span>
                             </div>
                         @endif
                      </div>
-                     <div class="product__details-share">
+                     <!-- <div class="product__details-share">
                         <span>Share:</span>
                         <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
                         <a href="#"><i class="fa-brands fa-twitter"></i></a>
                         <a href="#"><i class="fa-brands fa-behance"></i></a>
                         <a href="#"><i class="fa-brands fa-youtube"></i></a>
                         <a href="#"><i class="fa-brands fa-linkedin-in"></i></a>
-                     </div>
+                     </div> -->
                   </div>
                </div>
             </div>

@@ -212,8 +212,8 @@ new class extends Component
                                 <a href="{{ route('product-details' , $product->slug) }}" wire:navigate>
                                     <img src="{{ asset('storage/' . $product->productImages->first()?->image) }}" alt="{{ $product->name }}" loading="lazy">
                                 </a>
-                                @if(auth()->user()?->role === 'customer' || !auth()->check())
                                     <div class="product-action-item">
+                                        @if(auth()->user()?->role === 'customer' || !auth()->check())
                                         <button type="button" class="product-action-btn" wire:click="addToCart(@js($product->slug))" wire:loading.attr="disabled">
                                             <svg width="20" height="22" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M13.0768 10.1416C13.0768 11.9228 11.648 13.3666 9.88542 13.3666C8.1228 13.3666 6.69401 11.9228 6.69401 10.1416M1.375 5.84163H18.3958M1.375 5.84163V12.2916C1.375 19.1359 2.57494 20.3541 9.88542 20.3541C17.1959 20.3541 18.3958 19.1359 18.3958 12.2916V5.84163M1.375 5.84163L2.91454 2.73011C3.27495 2.00173 4.01165 1.54163 4.81754 1.54163H14.9533C15.7592 1.54163 16.4959 2.00173 16.8563 2.73011L18.3958 5.84163" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -237,8 +237,20 @@ new class extends Component
                                             </svg>
                                             <span class="product-tooltip">Add To Wishlist</span>
                                         </button>
+                                        @endif
+                                        <button type="button" class="product-action-btn" aria-label="Share" title="Share" onclick="shareProduct(
+                                            '{{ $product->name }}',
+                                            '{{ route('product-details', $product->slug) }}'
+                                        )">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                <circle cx="18" cy="5" r="3" stroke="white" stroke-width="2" />
+                                                <circle cx="6" cy="12" r="3" stroke="white" stroke-width="2" />
+                                                <circle cx="18" cy="19" r="3" stroke="white" stroke-width="2" />
+                                                <path d="M8.6 10.5L15.4 6.5M8.6 13.5L15.4 17.5" stroke="white" stroke-width="2" stroke-linecap="round" />
+                                            </svg>
+                                            <span class="product-tooltip">Share</span>
+                                        </button>
                                     </div>
-                                @endif
                             </div>
 
                             <div class="product-content text-center">
@@ -373,7 +385,9 @@ new class extends Component
                                                     <span class="new-price mt-4">₦{{ number_format($quickViewPrice, 2) }}</span>
                                                 </div>
                                                 <p>{{ $quickViewProduct->description }}</p>
+
                                                 <div class="product__details-action mb-35">
+                                                     @if(auth()->user()?->role === 'customer' || !auth()->check())
                                                     <div class="product__quantity">
                                                         <div class="product-quantity-wrapper">
                                                             <button type="button" class="cart-minus" aria-label="Decrease quantity" wire:click="decrementQuickViewQuantity">
@@ -398,6 +412,13 @@ new class extends Component
                                                             <i class="fa-solid fa-heart"></i>
                                                         </button>
                                                     </div>
+                                                    @endif
+                                                    <div class="product__share">
+                                                        <button type="button" class="product__share-btn" aria-label="Share" title="Share" onclick="shareProduct(
+                                                            '{{ $quickViewProduct->name }}',
+                                                            '{{ route('product-details', $quickViewProduct->slug) }}'
+                                                        )"><i class="fa-solid fa-share-nodes"></i></button>
+                                                    </div>
                                                 </div>
                                                 <div class="product__details-meta">
                                                     <div class="store">
@@ -415,8 +436,11 @@ new class extends Component
                                                     </div>
                                                     <div><span>Available:</span> {{ $quickViewAvailable }}</div>
                                                     <div><span>Weight:</span> {{ $selectedVariant?->weight ?? $quickViewProduct->weight ?? 'N/A' }}{{ ($selectedVariant?->weight ?? $quickViewProduct->weight) ? 'kg' : '' }}</div>
-                                                    @if($selectedVariant && $selectedVariant->size_id !== null && $selectedVariant->size)
-                                                        <div><span>Size:</span> <span class="product-size">{{ $selectedVariant->size->name }}</span></div>
+                                                    @if($selectedVariant && $selectedVariant->size_id)
+                                                        <div class="size">
+                                                        <span>Size:</span>
+                                                        <span class="text-capitalize size-value">{{ $selectedVariant->size?->name ?? 'N/A' }}</span>
+                                                        </div>
                                                     @endif
                                                 </div>
                                             </div>
