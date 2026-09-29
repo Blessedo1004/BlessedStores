@@ -136,7 +136,7 @@ new class extends Component
                                     @endif   
 
                                     <div class="product-thumb theme-bg-2">
-                                    <a href="{{ route('product-details' , $newArrival->slug) }}" wire:navigate>
+                                    <a href="{{ route('product-details', $newArrival->slug) }}">
                                         <img src="{{ asset('storage/' . $newArrival->productImages[0]->image) }}"
                                         alt="{{ $newArrival->name }}" loading="lazy">
                                     </a>    

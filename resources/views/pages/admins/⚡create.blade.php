@@ -168,16 +168,8 @@ new class extends Component
 
                             </div> 
                        </div>
-   
-
-                           
-                       
-
-
                     </div>
-
                 </form>
-
             </div>
         </div>
 

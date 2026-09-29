@@ -19,6 +19,7 @@ Route::livewire('/product-details/{slug}', '.⚡product-details')->name('product
 Route::livewire('/store-details/{slug}', '.⚡store-details')->name('store-details');
 Route::livewire('/new-arrivals', '.⚡all-new-arrivals')->name('all-new-arrivals');
 Route::livewire('/category-products/{category}', '.⚡category-products')->name('category-products');
+Route::livewire('/checkout', '.⚡checkout')->name('checkout');
 
 Route::middleware('cache.headers:no_store,private')->controller(AuthController::class)->group(function(){
     Route::get('/login','showSignIn')->name('login');

@@ -70,6 +70,11 @@ new class extends Component
         $this->dispatch('cart-updated');
     }
 
+    public function proceedToCheckout(){
+        session()->flash('cart', $this->cartItems);
+        return $this->redirect(route('checkout'), navigate:true);
+    }
+
     public function mount(){
         $this->getCartCount();
         $this->getCartItems();
@@ -164,6 +169,19 @@ new class extends Component
                         <span class="cart-total__label">Total</span>
                         <strong class="cart-total__amount">₦{{ number_format($cartItems->sum(fn ($cartItem) => $cartItem->price * $cartItem->quantity), 2) }}</strong>
                     </div>
+                    @if($cartItems->isNotEmpty())
+                        <button type="submit" class="fill-btn border-0 mt-4" wire:loading.attr="disabled">                        
+                            <span class="fill-btn-inner" wire:loading.remove wire:target="proceedToCheckout">
+                                <span class="fill-btn-normal">Proceed To Checkout</span>
+                                <span class="fill-btn-hover">Proceed To Checkout</span>
+                            </span>
+
+                            <span class="fill-btn-inner" wire:loading wire:target="proceedToCheckout">
+                                <span class="fill-btn-normal">Please Wait...</span>
+                                <span class="fill-btn-hover">Please Wait...</span>
+                            </span>
+                        </button>
+                    @endif
                 </div>
             </div>
         </div>
