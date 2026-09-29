@@ -48,46 +48,9 @@ new class extends Component
          <div class="container">
             <div class="row align-items-center">
                <div class="col-xxl-6 col-lg-6">
-                  <div class="product__details-thumb-wrapper d-sm-flex align-items-start mr-50">
-                     <div class="product__details-thumb-tab mr-20">
-                        <nav>
-                           <div class="nav nav-tabs flex-nowrap flex-sm-column" id="nav-tab" role="tablist">
-                              <button class="nav-link active" id="img-1-tab" data-bs-toggle="tab"
-                                 data-bs-target="#img-1" type="button" role="tab" aria-controls="img-1"
-                                 aria-selected="true">
-                                 <img src="assets/imgs/product/details/details-04.png" alt="product-sm-thumb">
-                              </button>
-                              <button class="nav-link" id="img-2-tab" data-bs-toggle="tab" data-bs-target="#img-2"
-                                 type="button" role="tab" aria-controls="img-3" aria-selected="false">
-                                 <img src="assets/imgs/product/details/details-05.png" alt="product-sm-thumb">
-                              </button>
-                              <button class="nav-link" id="img-3-tab" data-bs-toggle="tab" data-bs-target="#img-3"
-                                 type="button" role="tab" aria-controls="img-3" aria-selected="false">
-                                 <img src="assets/imgs/product/details/details-06.png" alt="product-sm-thumb">
-                              </button>
-                           </div>
-                        </nav>
-                     </div>
-                     <div class="product__details-thumb-tab-content">
-                        <div class="tab-content" id="productthumbcontent">
-                           <div class="tab-pane fade show active" id="img-1" role="tabpanel"
-                              aria-labelledby="img-1-tab">
-                              <div class="product__details-thumb-big w-img">
-                                 <img src="assets/imgs/product/details/details-04.png" alt="">
-                              </div>
-                           </div>
-                           <div class="tab-pane fade" id="img-2" role="tabpanel" aria-labelledby="img-2-tab">
-                              <div class="product__details-thumb-big w-img">
-                                 <img src="assets/imgs/product/details/details-05.png" alt="">
-                              </div>
-                           </div>
-                           <div class="tab-pane fade" id="img-3" role="tabpanel" aria-labelledby="img-3-tab">
-                              <div class="product__details-thumb-big w-img">
-                                 <img src="assets/imgs/product/details/details-06.png" alt="">
-                              </div>
-                           </div>
-                        </div>
-                     </div>
+                  <div class="product__details-thumb-big w-img mr-50 text-center">
+                     <img src="{{ $store->logo ? asset('storage/' . $store->logo) : asset('imgs/logo/logo.png') }}"
+                        alt="{{ $store->name }} logo" style="max-height: 420px; width: 100%; object-fit: contain;">
                   </div>
                </div>
                <div class="col-xxl-6 col-lg-6">
