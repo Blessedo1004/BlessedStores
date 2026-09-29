@@ -231,7 +231,7 @@ new class extends Component
                         </div>
                         @endif
                         <div class="product__share">
-                           <button type="button" class="product__share-btn" aria-label="Share" title="Share" onclick="shareProduct(
+                           <button type="button" class="product__share-btn" aria-label="Share" title="Share" onclick="share(
                               '{{ $product->name }}',
                               '{{ route('product-details', $product->slug) }}'
                            )"><i class="fa-solid fa-share-nodes"></i></button>

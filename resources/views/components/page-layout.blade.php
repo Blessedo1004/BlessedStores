@@ -62,23 +62,12 @@
          <div class="row">
             <div class="col-xl-12">
                <div class="df-search-form">
-                  <div class="df-search-close text-center mb-20">
-                     <button class="df-search-close-btn df-search-close-btn"></button>
+                  <div class="offcanvas__close df-search-close mb-20">
+                     <button type="button" class="tp-search-close-btn mx-auto d-block" aria-label="Close search">
+                        <i class="fal fa-times"></i>
+                     </button>
                   </div>
-                  <form action="#">
-                     <div class="df-search-input mb-10">
-                        <input type="text" placeholder="Search for product...">
-                        <button type="submit"><i class="flaticon-search-1"></i></button>
-                     </div>
-                     <div class="df-search-category">
-                        <span>Search by : </span>
-                        <a href="#">Healthline, </a>
-                        <a href="#">COVID-19, </a>
-                        <a href="#">Surgery, </a>
-                        <a href="#">Surgeon, </a>
-                        <a href="#">Medical research</a>
-                     </div>
-                  </form>
+                  <livewire:search-product />
                </div>
             </div>
          </div>
@@ -251,7 +240,12 @@
                         </div>
                      </div>
                      <div class="header-right d-inline-flex align-items-center justify-content-end justify-content-xxl-start">
-                        <livewire:search-product/>
+                        <button type="button" class="header-search-trigger search-toggle-open" aria-label="Open search" title="Search">
+                           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                              <circle cx="10.8" cy="10.8" r="7.3" stroke="currentColor" stroke-width="2" />
+                              <path d="M16.2 16.2L22 22" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                           </svg>
+                        </button>
                         @if(auth()->user()?->role === "customer" || !auth()->user())
                            <div class="header-action d-flex align-items-center ml-30">
                               {{--

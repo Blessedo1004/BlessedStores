@@ -18,12 +18,17 @@ new class extends Component
                 else if($category->parent_id && !in_array($category->parent_id, $this->categoryIds)){
                     $this->categoryIds[] = $category->parent_id;    
                 }
+                $categoryIdCount = count($this->categoryIds);
+                if( $categoryIdCount < 4){
+                  $extraCategoryIds = Category::mainCategory()->inRandomOrder()->take(4 - $categoryIdCount )->pluck('id')->toArray(); 
+                  $this->categoryIds = array_merge($this->categoryIds , $extraCategoryIds);
+                }
             }
-            $this->userCategories = Category::whereIn('id' , $this->categoryIds)->inRandomOrder()->take(2)->get(['id' , 'name']);
+            $this->userCategories = Category::whereIn('id' , $this->categoryIds)->inRandomOrder()->take(4)->get(['id' , 'name']);
         }
 
         else{
-            $this->userCategories = Category::mainCategory()->inRandomOrder()->take(2)->get(['id' , 'name']);
+            $this->userCategories = Category::mainCategory()->inRandomOrder()->take(4)->get(['id' , 'name']);
         }
     }
 };

@@ -173,7 +173,7 @@ new class extends Component
                                             <span class="product-tooltip">Add To Wishlist</span>
                                         </button>
                                         @endif
-                                        <button type="button" class="product-action-btn" aria-label="Share" title="Share" onclick="shareProduct(
+                                        <button type="button" class="product-action-btn" aria-label="Share" title="Share" onclick="share(
                                             '{{ $newArrival->name }}',
                                             '{{ route('product-details', $newArrival->slug) }}'
                                         )">
@@ -368,7 +368,7 @@ new class extends Component
                                                     </div>
                                                     @endif
                                                     <div class="product__share">
-                                                        <button type="button" class="product__share-btn" aria-label="Share" title="Share" onclick="shareProduct(
+                                                        <button type="button" class="product__share-btn" aria-label="Share" title="Share" onclick="share(
                                                             '{{ $quickViewProduct->name }}',
                                                             '{{ route('product-details', $quickViewProduct->slug) }}'
                                                         )"><i class="fa-solid fa-share-nodes"></i></button>

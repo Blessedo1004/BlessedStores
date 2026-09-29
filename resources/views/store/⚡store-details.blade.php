@@ -77,13 +77,12 @@ new class extends Component
                            <span>Phone Number:  {{ $store->phone_number }}</span>
                         </div>
                      </div>
-                     <div class="product__details-share">
-                        <span>Share:</span>
-                        <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
-                        <a href="#"><i class="fa-brands fa-twitter"></i></a>
-                        <a href="#"><i class="fa-brands fa-behance"></i></a>
-                        <a href="#"><i class="fa-brands fa-youtube"></i></a>
-                        <a href="#"><i class="fa-brands fa-linkedin-in"></i></a>
+                     <div class="product__share">
+                           <button type="button" class="product__share-btn" aria-label="Share" title="Share" onclick="share(
+                              '{{ $store->name }}',
+                              '{{ route('store-details', $store->slug) }}',
+                              'store'
+                           )"><i class="fa-solid fa-share-nodes"></i></button>
                      </div>
                   </div>
                </div>

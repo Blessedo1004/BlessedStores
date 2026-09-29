@@ -1065,11 +1065,11 @@
 })(jQuery);
 
 //Share
-function shareProduct(name, url) {
+function share(name, url, type) {
     if (navigator.share) {
         navigator.share({
             title: name,
-            text: `Check out ${name} on Blessed Store!\n\n${url}`
+            text: `Check out ${type === 'store' ? 'this store' : 'this product'}  ${name} on BlessedStores!\n\n${url}`
         }).catch(error => {
             if (error.name !== 'AbortError') {
                 console.error('Sharing failed:', error);
@@ -1081,3 +1081,4 @@ function shareProduct(name, url) {
             .catch(error => console.error('Could not copy link:', error));
     }
 }
+

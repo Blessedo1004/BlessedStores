@@ -20,8 +20,10 @@
                                  <div class="banner-btn-wrapper furniture__btn-group">
                                     <a class="solid-btn" href="product-details.html">Buy Now<span><i
                                              class="fa-regular fa-angle-right"></i></span></a>
+                                    @if(auth()->user()?->role === 'customer' || !auth()->check())
                                     <a class="border__btn-banner" href="{{ route('product-details' ,  $product->slug) }}">view details<span><i
                                              class="fa-regular fa-angle-right"></i></span></a>
+                                    @endif
                                  </div>
                               </div>
                            </div>
