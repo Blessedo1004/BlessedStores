@@ -20,7 +20,10 @@ new class extends Component
                 }
                 $categoryIdCount = count($this->categoryIds);
                 if( $categoryIdCount < 4){
-                  $extraCategoryIds = Category::mainCategory()->inRandomOrder()->take(4 - $categoryIdCount )->pluck('id')->toArray(); 
+                  $extraCategoryIds = Category::mainCategory()->whereNotIn('id', $this->categoryIds)
+                  ->inRandomOrder()
+                  ->take(4 - $categoryIdCount )
+                  ->pluck('id')->toArray(); 
                   $this->categoryIds = array_merge($this->categoryIds , $extraCategoryIds);
                 }
             }
