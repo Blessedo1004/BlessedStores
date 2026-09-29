@@ -6,25 +6,26 @@ use App\Models\Product;
 
 trait HandlesNewArrivals
 {
-    public function loadNewArrivals()
+    public function loadNewArrivals(?int $perPage = null, string $sortBy = 'latest')
     {
         $query = Product::with(
             'productImages',
             'brand',
             'categories',
-            'productVariants.size'
+            'productVariants.size',
+            'store:id,slug,name'
         )
-        ->inRandomOrder()
         ->visible()
-        ->inStock();
+        ->inStock()
+        ->where('created_at', '>=', now()->startOfMonth());
+
+        $categoryIds = [];
 
         if (auth()->check() && auth()->user()->categories->isNotEmpty()) {
             $categories = auth()->user()
                 ->categories()
                 ->with('subCategories')
                 ->get();
-
-            $categoryIds = [];
 
             foreach ($categories as $category) {
                 $categoryIds[] = $category->id;
@@ -37,29 +38,26 @@ trait HandlesNewArrivals
                 }
             }
 
-            $this->totalNewArrivals = (clone $query)
-                ->whereHas('categories', function ($query) use ($categoryIds) {
-                    $query->whereIn('category_id', $categoryIds);
-                })
-                ->where('created_at', '>=', now()->startOfWeek())
-                ->get();
-
-            $this->newArrivals = (clone $query)
-                ->whereHas('categories', function ($query) use ($categoryIds) {
-                    $query->whereIn('category_id', $categoryIds);
-                })
-                ->where('created_at', '>=', now()->startOfWeek())
-                ->take(5)
-                ->get();
-        } else {
-            $this->totalNewArrivals = (clone $query)
-                ->where('created_at', '>=', now()->startOfMonth())
-                ->get();
-
-            $this->newArrivals = (clone $query)
-                ->where('created_at', '>=', now()->startOfMonth())
-                ->take(5)
-                ->get();
+            $query->whereHas('categories', function ($query) use ($categoryIds) {
+                $query->whereIn('category_id', $categoryIds);
+            });
         }
+
+        if ($perPage !== null) {
+            match ($sortBy) {
+                'price_low' => $query->orderBy('price'),
+                'price_high' => $query->orderByDesc('price'),
+                'name' => $query->orderBy('name'),
+                default => $query->latest(),
+            };
+
+            return $query->paginate($perPage);
+        }
+
+        $this->totalNewArrivals = (clone $query)->inRandomOrder()->get();
+        $this->newArrivals = (clone $query)
+                ->inRandomOrder()
+                ->take(5)
+                ->get();
     }
 }

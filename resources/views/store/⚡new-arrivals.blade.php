@@ -16,35 +16,71 @@ new class extends Component
     public ?int $selectedVariantId = null;
     public int $quickViewQuantity = 1;
     public bool $removeAlert = false;
+    public bool $quickViewAction = false;
+    public ?string $quickViewAlertType = null;
+    public ?string $quickViewAlertMessage = null;
 
     public function mount(){
         $this->loadNewArrivals();
     }
 
-    public function addToCart($slug, ?int $variantId = null, int $quantity = 1){
+    public function addToCart($slug, ?int $variantId = null, int $quantity = 1, bool $fromQuickView = false){
+        $this->beginCartOrWishlistAction($fromQuickView);
         $product = Product::with('productImages', 'productVariants.size')->where('slug' , $slug)->firstOrFail();
         if ($product->productVariants->isNotEmpty() && !$variantId) {
             session()->flash('error', 'Please select a variant first.');
+            $this->captureQuickViewAlert($fromQuickView);
             return;
         }
         if (app(CartService::class)->add($product, $quantity, $variantId)) {
             $this->dispatch('cart-updated');
         }
+        $this->captureQuickViewAlert($fromQuickView);
     }
 
-    public function addToWishlist($slug, ?int $variantId = null): void
+    public function addToWishlist($slug, ?int $variantId = null, bool $fromQuickView = false): void
     {
+        $this->beginCartOrWishlistAction($fromQuickView);
         $product = Product::with('productVariants')->where('slug', $slug)->firstOrFail();
 
         if (app(WishlistService::class)->add($product, $variantId)) {
             $this->dispatch('wishlist-updated');
+        }
+        $this->captureQuickViewAlert($fromQuickView);
+    }
+
+    public function dismissQuickViewAlert(): void
+    {
+        $this->quickViewAlertType = null;
+        $this->quickViewAlertMessage = null;
+    }
+
+    private function beginCartOrWishlistAction(bool $fromQuickView): void
+    {
+        $this->quickViewAction = $fromQuickView;
+        $this->quickViewAlertType = null;
+        $this->quickViewAlertMessage = null;
+    }
+
+    private function captureQuickViewAlert(bool $fromQuickView): void
+    {
+        if (!$fromQuickView) {
+            return;
+        }
+
+        if (session()->has('error')) {
+            $this->quickViewAlertType = 'error';
+            $this->quickViewAlertMessage = session('error');
+        } elseif (session()->has('success')) {
+            $this->quickViewAlertType = 'success';
+            $this->quickViewAlertMessage = session('success');
         }
     }
 
     public function showQuickView($slug){
         $this->selectedVariantId = null;
         $this->quickViewQuantity = 1;
-        $this->quickViewProduct = Product::with('productImages', 'brand', 'categories', 'productVariants.size')
+        $this->quickViewProduct = Product::with('productImages', 'brand', 'categories', 'productVariants.size', 'store:id,slug,name')
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -100,7 +136,7 @@ new class extends Component
                                     @endif   
 
                                     <div class="product-thumb theme-bg-2">
-                                    <a href="{{ route('product-details' , $newArrival->slug) }}">
+                                    <a href="{{ route('product-details' , $newArrival->slug) }}" wire:navigate>
                                         <img src="{{ asset('storage/' . $newArrival->productImages[0]->image) }}"
                                         alt="{{ $newArrival->name }}" loading="lazy">
                                     </a>    
@@ -122,7 +158,7 @@ new class extends Component
                                             </span>
                                         </button>
                                         <button type="button" class="product-action-btn" wire:click="showQuickView(@js($newArrival->slug))" data-bs-toggle="modal"
-                                            data-bs-target="#newArrivalsQuickViewModal" wire:loading.attr="disabled">
+                                            data-bs-target="#newArrivalsQuickViewModal" wire:loading.attr="disabled" wire:target="showQuickView">
                                             <svg width="26" height="18" viewBox="0 0 26 18" fill="none"
                                                 xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M13.092 4.55026C10.5878 4.55026 8.55683 6.58125 8.55683 9.08541C8.55683 11.5896 10.5878 13.6206 13.092 13.6206C15.5961 13.6206 17.6271 11.5903 17.6271 9.08541C17.6271 6.5805 15.5969 4.55026 13.092 4.55026ZM13.092 12.1089C11.4246 12.1089 10.0338 10.7196 10.0338 9.05216C10.0338 7.38473 11.3898 6.02872 13.0572 6.02872C14.7246 6.02872 16.0807 7.38473 16.0807 9.05216C16.0807 10.7196 14.7594 12.1089 13.092 12.1089ZM25.0965 8.8768C25.0875 8.839 25.092 8.79819 25.0807 8.76115C25.0761 8.74528 25.0655 8.73621 25.0603 8.7226C25.0519 8.70144 25.0542 8.67574 25.0429 8.65533C22.8441 3.62131 18.1064 0.724854 13.0572 0.724854C8.00807 0.724854 3.17511 3.61677 0.975559 8.65079C0.966488 8.67196 0.968 8.69388 0.959686 8.71806C0.954395 8.73318 0.943812 8.74074 0.938521 8.7551C0.927184 8.7929 0.931719 8.83296 0.92416 8.8715C0.910555 8.93953 0.897705 9.00605 0.897705 9.07483C0.897705 9.14361 0.910555 9.20862 0.92416 9.2774C0.931719 9.31519 0.926428 9.35677 0.938521 9.39229C0.943057 9.40968 0.954395 9.41648 0.959686 9.4316C0.967244 9.45201 0.965732 9.4777 0.975559 9.49887C3.17511 14.5314 7.96121 17.381 13.0104 17.381C18.0595 17.381 22.8448 14.5374 25.0436 9.5034C25.055 9.48148 25.0527 9.45956 25.061 9.43538C25.0663 9.42253 25.0761 9.4127 25.0807 9.39758C25.092 9.36055 25.089 9.32049 25.0965 9.28118C25.1101 9.21315 25.1222 9.14739 25.1222 9.0771C25.1222 9.01058 25.1094 8.94482 25.0958 8.87604L25.0965 8.8768ZM13.0104 15.8692C8.72841 15.8692 4.51298 13.6123 2.44193 9.07407C4.49333 4.55177 8.76469 2.23582 13.0572 2.23582C17.349 2.23582 21.5251 4.55404 23.5773 9.07861C21.5266 13.6002 17.3036 15.8692 13.0104 15.8692Z" fill="white" />
@@ -160,7 +196,7 @@ new class extends Component
                 @if($totalNewArrivals->count() > 5)
                     <a href="{{ route('all-new-arrivals') }}" class="float-end see-more" wire:navigate>See More...</a>
                 @endif
-                @if(session('success'))
+                @if(session('success') && !$quickViewAction)
                     <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-6 mx-auto d-block align-items-center" wire:transition>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -169,7 +205,7 @@ new class extends Component
                     </div>
                 @endif
 
-                @if(session('error'))
+                @if(session('error') && !$quickViewAction)
                  <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small flex-column flex-lg-row justify-content-center {{ $removeAlert ? 'd-none' : '' }} col-lg-6 mx-auto d-block align-items-center" role="alert" wire:transition>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -196,6 +232,32 @@ new class extends Component
                         </button>
 
                         <div class="modal__inner">
+                            @if($quickViewAlertMessage)
+                                @if($quickViewAlertType === 'success')
+                                    <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-6 mx-auto d-block align-items-center" wire:transition>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>{{ $quickViewAlertMessage }}</span>
+                                    </div>
+                                @else
+                                    <div class="alert alert-danger border-0 shadow-sm mb-4 p-3 d-flex gap-2 small flex-column flex-lg-row justify-content-center col-lg-6 mx-auto d-block align-items-center" role="alert" wire:transition>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <ul class="mb-0 ps-2 list-unstyled"><li>{{ $quickViewAlertMessage }}</li></ul>
+                                        <button type="button" class="btn btn-link text-danger p-0 ms-auto" aria-label="Dismiss alert" wire:click="dismissQuickViewAlert" wire:loading.attr="disabled">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M6 18L18 6" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                @endif
+                            @endif
+                            <div class="store-info-loading" wire:loading wire:target="showQuickView">
+                                <span class="store-search-results-status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Loading product details...</span>
+                            </div>
+                            <div wire:loading.remove wire:target="showQuickView">
                             @if($quickViewProduct)
                                 @php
                                     $selectedVariant = $quickViewProduct->productVariants->firstWhere('id', $this->selectedVariantId);
@@ -277,7 +339,7 @@ new class extends Component
                                                         </div>
                                                     </div>
                                                     <div class="product__add-cart">
-                                                        <button type="button" class="fill-btn cart-btn" wire:click="addToCart('{{ $quickViewProduct->slug }}', {{ $selectedVariant?->id ?? 'null' }}, {{ $quickViewQuantity }})" data-bs-dismiss="modal" wire:loading.attr="disabled">
+                                                        <button type="button" class="fill-btn cart-btn" wire:click="addToCart('{{ $quickViewProduct->slug }}', {{ $selectedVariant?->id ?? 'null' }}, {{ $quickViewQuantity }}, true)" wire:loading.attr="disabled" wire:target="addToCart">
                                                             <span class="fill-btn-inner">
                                                                 <span class="fill-btn-normal">Add To Cart<i class="fa-solid fa-basket-shopping"></i></span>
                                                                 <span class="fill-btn-hover">Add To Cart<i class="fa-solid fa-basket-shopping"></i></span>
@@ -285,17 +347,21 @@ new class extends Component
                                                         </button>
                                                     </div>
                                                     <div class="product__add-wish">
-                                                        <button type="button" class="product__add-wish-btn" wire:click="addToWishlist('{{ $quickViewProduct->slug }}', {{ $selectedVariant?->id ?? 'null' }})" aria-label="Add to wishlist" title="Add to wishlist" wire:loading.attr="disabled">
+                                                        <button type="button" class="product__add-wish-btn" wire:click="addToWishlist('{{ $quickViewProduct->slug }}', {{ $selectedVariant?->id ?? 'null' }}, true)" aria-label="Add to wishlist" title="Add to wishlist" wire:loading.attr="disabled" wire:target="addToWishlist">
                                                             <i class="fa-solid fa-heart"></i>
                                                         </button>
                                                     </div>
                                                 </div>
                                                 <div class="product__details-meta">
+                                                    <div class="store">
+                                                        <span>Posted By:</span>
+                                                            <a href="{{ route('store-details' , $quickViewProduct->store->slug) }}" wire:navigate>{{ $quickViewProduct->store->name }}</a>
+                                                    </div>
                                                     <div class="sku"><span>SKU:</span> {{ $selectedVariant?->sku ?? $quickViewProduct->sku ?? 'N/A' }}</div>
                                                     <div class="categories">
                                                         <span>Categories:</span>
                                                         @forelse($quickViewProduct->categories as $category)
-                                                            <span>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</span>
+                                                            <a href="{{ route('category-products' , $category->id) }}" wire:navigate>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</a>
                                                         @empty
                                                             <span>N/A</span>
                                                         @endforelse
@@ -313,6 +379,7 @@ new class extends Component
                             @else
                                 <div class="store-info-loading">Loading product details...</div>
                             @endif
+                            </div>
                         </div>
                     </div>
                 </div>

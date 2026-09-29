@@ -126,6 +126,23 @@ class WishlistService
         )));
     }
 
+    public function clear(): void
+    {
+        if (! $this->canUseWishlist()) {
+            return;
+        }
+
+        if (auth()->check()) {
+            Wishlist::query()
+                ->where('user_id', auth()->id())
+                ->delete();
+
+            return;
+        }
+
+        $this->cache()->forget($this->guestWishlistKey());
+    }
+
     public function mergeGuestWishlist(User $user, ?string $token = null): void
     {
         if (! $user->can('customer')) {

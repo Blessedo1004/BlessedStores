@@ -104,12 +104,7 @@
                      </button>
                   </div>
                </div>
-               <div class="offcanvas__search mb-25">
-                  <form action="#">
-                     <input type="text" placeholder="Search for Store..">
-                     <button type="submit"><i class="far fa-search"></i></button>
-                  </form>
-               </div>
+               <livewire:search-store/>
                <div class="mobile-menu fix mb-40"></div>
                <div class="banner-btn-wrapper furniture__btn-group d-flex d-xxl-none">
                   @auth
@@ -131,7 +126,7 @@
                      </a>
                    @endauth
                </div>
-               <div class="offcanvas__contact mt-30 mb-20">
+               <!-- <div class="offcanvas__contact mt-30 mb-20">
                   <h4>Contact Info</h4>
                   <ul>
                      <li class="d-flex align-items-center">
@@ -169,7 +164,7 @@
                      <li><a href="#"><i class="fab fa-youtube"></i></a></li>
                      <li><a href="#"><i class="fab fa-linkedin"></i></a></li>
                   </ul>
-               </div>
+               </div> -->
             </div>
          </div>
       </div>
@@ -256,7 +251,7 @@
                         </div>
                      </div>
                      <div class="header-right d-inline-flex align-items-center justify-content-end justify-content-xxl-start">
-                        <livewire:search/>
+                        <livewire:search-product/>
                         @if(auth()->user()?->role === "customer" || !auth()->user())
                            <div class="header-action d-flex align-items-center ml-30">
                               {{--

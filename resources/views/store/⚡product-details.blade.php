@@ -16,7 +16,7 @@ new class extends Component
     public bool $removeAlert = false;
 
     public function mount($slug){
-        $this->product = Product::with('productImages', 'brand', 'categories', 'productVariants.size')
+        $this->product = Product::with('productImages', 'brand', 'categories', 'productVariants.size', 'store:id,slug,name')
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -85,7 +85,7 @@ new class extends Component
                      <div class="breadcrumb__menu">
                         <nav>
                            <ul>
-                              <li><span><a href="{{ route('home') }}">Home</a></span></li>
+                              <li><span><a href="{{ route('home') }}" wire:navigate>Home</a></span></li>
                               <li><span>{{ $product->name }}</span></li>
                            </ul>
                         </nav>
@@ -182,6 +182,10 @@ new class extends Component
                         </div>
                      </div>
                      <h3 class="product__details-title text-capitalize">{{ $product->name }}</h3>
+                      <!-- <div class="product__details-price">
+                        <span class="old-price">$30.35</span>
+                        <span class="new-price">$19.25</span>
+                     </div> -->
                      <div class="product__details-price">
                         <span class="new-price">₦{{ number_format($displayPrice, 2) }}</span>
                      </div>
@@ -227,6 +231,10 @@ new class extends Component
                         @endif
                      </div>
                      <div class="product__details-meta mb-20">
+                        <div class="store">
+                           <span>Posted By:</span>
+                              <a href="{{ route('store-details' , $product->store->slug) }}" wire:navigate>{{ $product->store->name }}</a>
+                        </div>
                         <div class="sku">
                            <span>SKU:</span>
                            <span>{{ $selectedVariant?->sku ?? $product->sku ?? 'N/A' }}</span>
@@ -234,7 +242,7 @@ new class extends Component
                         <div class="categories">
                            <span>Categories:</span>
                            @forelse($product->categories as $category)
-                               <span>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</span>
+                              <a href="{{ route('category-products' , $category->id) }}" wire:navigate>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</a>
                            @empty
                                <span>N/A</span>
                            @endforelse

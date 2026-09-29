@@ -34,6 +34,13 @@ new class extends Component
         app(WishlistService::class)->remove($productId, $variantId);
         $this->refreshWishlist();
     }
+
+    public function clearWishlist(): void
+    {
+        app(WishlistService::class)->clear();
+        $this->refreshWishlist();
+        $this->dispatch('wishlist-updated');
+    }
 };
 ?>
 
@@ -49,7 +56,15 @@ new class extends Component
         <div class="offcanvas__wrapper">
             <div class="offcanvas__content">
                 <div class="offcanvas__top mb-40 d-flex justify-content-between align-items-center">
-                    <div class="offcanvas__logo"><h4 class="text-white mb-0">Your Wishlist</h4></div>
+                    <div class="offcanvas__logo">
+                        <h4 class="text-white mb-0">Your Wishlist</h4>
+                        @if($wishlistItems->isNotEmpty())
+                            <button type="button" class="btn btn-link text-white p-0 mt-2" wire:click="clearWishlist" wire:confirm="Are you sure you want to clear your wishlist?" wire:loading.attr="disabled" wire:target="clearWishlist">
+                                <span wire:loading.remove wire:target="clearWishlist">Clear Wishlist</span>
+                                <span wire:loading wire:target="clearWishlist"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Clearing...</span>
+                            </button>
+                        @endif
+                    </div>
                     <div class="offcanvas__close"><button type="button" aria-label="Close wishlist" wire:click="$set('showWishlistModal', false)"><i class="fal fa-times"></i></button></div>
                 </div>
 

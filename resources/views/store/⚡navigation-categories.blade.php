@@ -34,10 +34,10 @@ new class extends Component
         <ul>
             @foreach ($userCategories as $category)
                 <li class="has-dropdown">
-                    <a href="{{ route('category-products', $category->id)}}" wire:navigate>{{ $category->name }}</a>
+                    <a href="{{ route('category-products', $category->id) }}" wire:navigate>{{ $category->name }}</a>
                     <ul class="submenu">
                         @foreach ($category->subCategories->sortBy('name') as $subCategory)
-                             <li><a href="{{ route('category-products', $subCategory->id)}}" wire:navigate>{{ $subCategory->name }}</a></li>   
+                             <li><a href="{{ route('category-products', $subCategory->id) }}" wire:navigate>{{ $subCategory->name }}</a></li>   
                         @endforeach
                     </ul>
                 </li>    

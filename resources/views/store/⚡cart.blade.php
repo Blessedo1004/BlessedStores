@@ -62,6 +62,14 @@ new class extends Component
         $this->dispatch('cart-updated');
     }
 
+    public function clearCart(): void
+    {
+        app(CartService::class)->clear();
+        $this->getCartCount();
+        $this->getCartItems();
+        $this->dispatch('cart-updated');
+    }
+
     public function mount(){
         $this->getCartCount();
         $this->getCartItems();
@@ -86,6 +94,12 @@ new class extends Component
                     <div class="offcanvas__top mb-40 d-flex justify-content-between align-items-center">
                         <div class="offcanvas__logo">
                             <h4 class="text-white mb-0">Your Cart</h4>
+                            @if($cartItems->isNotEmpty())
+                                <button type="button" class="btn btn-link text-white p-0 mt-2" wire:click="clearCart" wire:confirm="Are you sure you want to clear your cart?" wire:loading.attr="disabled" wire:target="clearCart">
+                                    <span wire:loading.remove wire:target="clearCart">Clear Cart</span>
+                                    <span wire:loading wire:target="clearCart"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Clearing...</span>
+                                </button>
+                            @endif
                         </div>
                         <div class="offcanvas__close">
                             <button type="button" aria-label="Close cart" wire:click="$set('showCartModal', false)">

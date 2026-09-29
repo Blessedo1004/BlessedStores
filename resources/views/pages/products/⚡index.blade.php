@@ -444,7 +444,9 @@ new class extends Component
                             </p>
                         </div>
                     @else
-                        <div class="store-info-loading">Loading product details...</div>
+                    <div class="store-info-loading">
+                        <span class="store-search-results-status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Loading product details...</span>
+                    </div>
                     @endif
                 </div>
             </div>
