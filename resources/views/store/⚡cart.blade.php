@@ -71,7 +71,12 @@ new class extends Component
     }
 
     public function proceedToCheckout(){
-        session()->flash('cart', $this->cartItems);
+        if (app(CartService::class)->items()->isEmpty()) {
+            $this->getCartItems();
+            $this->getCartCount();
+            return;
+        }
+
         return $this->redirect(route('checkout'), navigate:true);
     }
 
@@ -170,7 +175,7 @@ new class extends Component
                         <strong class="cart-total__amount">₦{{ number_format($cartItems->sum(fn ($cartItem) => $cartItem->price * $cartItem->quantity), 2) }}</strong>
                     </div>
                     @if($cartItems->isNotEmpty())
-                        <button type="submit" class="fill-btn border-0 mt-4" wire:loading.attr="disabled">                        
+                        <button type="button" class="fill-btn border-0 mt-4" wire:loading.attr="disabled" wire:click="proceedToCheckout">                        
                             <span class="fill-btn-inner" wire:loading.remove wire:target="proceedToCheckout">
                                 <span class="fill-btn-normal">Proceed To Checkout</span>
                                 <span class="fill-btn-hover">Proceed To Checkout</span>

@@ -27,9 +27,9 @@ new class extends Component
     public ?string $quickViewAlertType = null;
     public ?string $quickViewAlertMessage = null;
 
-    public function mount(int $category): void
+    public function mount($slug): void
     {
-        $categoryModel = Category::findOrFail($category);
+        $categoryModel = Category::where('slug', $slug)->firstOrFail();
         $this->categoryId = $categoryModel->id;
         $this->categoryName = $categoryModel->name;
     }
@@ -429,7 +429,7 @@ new class extends Component
                                                     <div class="categories">
                                                         <span>Categories:</span>
                                                         @forelse($quickViewProduct->categories as $category)
-                                                            <a href="{{ route('category-products' , $category->id) }}" wire:navigate>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</a>
+                                                            <a href="{{ route('category-products' , $category->slug) }}" wire:navigate>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</a>
                                                         @empty
                                                             <span>N/A</span>
                                                         @endforelse

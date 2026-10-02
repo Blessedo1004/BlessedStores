@@ -34,7 +34,18 @@ class CartService
 
     public function variantCart(): array
     {
-        return (array) session('cart_variant_items', []);
+        $cachedItems = $this->cache()->get($this->guestVariantCartKey(), null);
+
+        if (is_null($cachedItems)) {
+            $cachedItems = session('cart_variant_items', []);
+
+            if ($cachedItems !== []) {
+                $this->putGuestVariantCart($cachedItems);
+                session()->forget('cart_variant_items');
+            }
+        }
+
+        return $this->normalizeVariantCart($cachedItems ?? []);
     }
 
     public function items(): Collection
@@ -238,6 +249,7 @@ class CartService
         }
 
         $this->cache()->forget($this->guestCartKey());
+        $this->cache()->forget($this->guestVariantCartKey());
         session()->forget('cart_variant_items');
     }
 
@@ -320,7 +332,7 @@ class CartService
             'variant_id' => $variantId,
             'quantity' => $newQuantity,
         ];
-        session(['cart_variant_items' => $items]);
+        $this->putGuestVariantCart($items);
         session()->flash('success', 'Item added to cart.');
 
         return true;
@@ -339,7 +351,7 @@ class CartService
 
         if (isset($items[$key])) {
             $items[$key]['quantity'] = $quantity;
-            session(['cart_variant_items' => $items]);
+            $this->putGuestVariantCart($items);
         }
     }
 
@@ -350,7 +362,7 @@ class CartService
 
         if ($product) {
             unset($items[$this->variantCartKey($product, $variantId)]);
-            session(['cart_variant_items' => $items]);
+            $this->putGuestVariantCart($items);
         }
     }
 
@@ -388,9 +400,20 @@ class CartService
         );
     }
 
+    protected function putGuestVariantCart(array $items): void
+    {
+        $this->cache()->put(
+            $this->guestVariantCartKey(),
+            $this->normalizeVariantCart($items),
+            config('cart.cache_ttl')
+        );
+        session()->forget('cart_variant_items');
+    }
+
     protected function forgetGuestCart(string $token): void
     {
         $this->cache()->forget($this->guestCartKey($token));
+        $this->cache()->forget($this->guestVariantCartKey($token));
 
         if (session('cart_token') === $token) {
             session()->forget('cart_token');
@@ -400,6 +423,11 @@ class CartService
     protected function guestCartKey(?string $token = null): string
     {
         return 'cart:' . ($token ?? $this->guestCartToken());
+    }
+
+    protected function guestVariantCartKey(?string $token = null): string
+    {
+        return 'cart:variant:' . ($token ?? $this->guestCartToken());
     }
 
     protected function variantCartKey(Product $product, int $variantId): string
@@ -416,6 +444,20 @@ class CartService
     {
         return collect(is_array($cart) ? $cart : [])
             ->mapWithKeys(fn ($quantity, $productId) => [(int) $productId => max(1, (int) $quantity)])
+            ->all();
+    }
+
+    protected function normalizeVariantCart($cart): array
+    {
+        return collect(is_array($cart) ? $cart : [])
+            ->filter(fn ($entry) => is_array($entry))
+            ->mapWithKeys(fn ($entry, $key) => [
+                (string) $key => [
+                    'product_id' => (int) ($entry['product_id'] ?? 0),
+                    'variant_id' => (int) ($entry['variant_id'] ?? 0),
+                    'quantity' => max(1, (int) ($entry['quantity'] ?? 0)),
+                ],
+            ])
             ->all();
     }
 

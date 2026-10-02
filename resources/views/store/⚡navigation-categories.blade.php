@@ -27,11 +27,11 @@ new class extends Component
                   $this->categoryIds = array_merge($this->categoryIds , $extraCategoryIds);
                 }
             }
-            $this->userCategories = Category::whereIn('id' , $this->categoryIds)->inRandomOrder()->take(4)->get(['id' , 'name']);
+            $this->userCategories = Category::whereIn('id' , $this->categoryIds)->inRandomOrder()->take(4)->get(['id' , 'name', 'slug']);
         }
 
         else{
-            $this->userCategories = Category::mainCategory()->inRandomOrder()->take(4)->get(['id' , 'name']);
+            $this->userCategories = Category::mainCategory()->inRandomOrder()->take(4)->get(['id' , 'name', 'slug']);
         }
     }
 };
@@ -42,10 +42,10 @@ new class extends Component
         <ul>
             @foreach ($userCategories as $category)
                 <li class="has-dropdown">
-                    <a href="{{ route('category-products', $category->id) }}" wire:navigate>{{ $category->name }}</a>
+                    <a href="{{ route('category-products', $category->slug) }}" wire:navigate>{{ $category->name }}</a>
                     <ul class="submenu">
                         @foreach ($category->subCategories->sortBy('name') as $subCategory)
-                             <li><a href="{{ route('category-products', $subCategory->id) }}" wire:navigate>{{ $subCategory->name }}</a></li>   
+                             <li><a href="{{ route('category-products', $subCategory->slug) }}" wire:navigate>{{ $subCategory->name }}</a></li>   
                         @endforeach
                     </ul>
                 </li>    

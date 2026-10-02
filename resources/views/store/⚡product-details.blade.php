@@ -250,7 +250,7 @@ new class extends Component
                         <div class="categories">
                            <span>Categories:</span>
                            @forelse($product->categories as $category)
-                              <a href="{{ route('category-products' , $category->id) }}" wire:navigate>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</a>
+                              <a href="{{ route('category-products' , $category->slug) }}" wire:navigate>{{ $category->name }}{{ !$loop->last ? ',' : '' }}</a>
                            @empty
                                N/A
                            @endforelse
