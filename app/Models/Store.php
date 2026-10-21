@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class Store extends Model
 {
-    protected $fillable = ['user_id', 'name', 'phone_number', 'logo', 'slug', 'description', 'address'];
+    protected $fillable = ['user_id', 'name', 'phone_number', 'logo', 'slug', 'description', 'address', 'paystack_subaccount_code', 'payment_setup_status', 'payment_setup_completed_at'];
     
     public function socials(){
         return $this->hasMany(Social::class);
@@ -27,7 +27,11 @@ class Store extends Model
     }
 
     public function scopeActive($query){
-        return $query->where('status' , 'active');
+        return $query->where('store_status' , 'active');
+    }
+
+    public function scopeReady($query){
+        return $query->where('payment_setup_status' , 'ready');
     }
 
     //create slug

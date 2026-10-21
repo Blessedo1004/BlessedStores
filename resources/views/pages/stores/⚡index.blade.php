@@ -28,7 +28,7 @@ new class extends Component
                 $query->where('user_id', $user->id);
             })
             ->when($this->status, function ($query) {
-                $query->where('status', $this->status);
+                $query->where('store_status', $this->status);
             })
             ->when($this->searchTerm, function ($query) {
                 $search = '%' . trim($this->searchTerm) . '%';
@@ -227,8 +227,8 @@ new class extends Component
                             <td>{{ Str::limit($store->address, 50) }}</td>
                             <td>{{ $store->created_at->format('M d,Y') }}</td>
                             <td>
-                                <span class="status-badge {{ $store->status === 'active' ? 'bg-success' : 'bg-danger'}}">
-                                    {{ $store->status }}
+                                <span class="status-badge {{ $store->store_status === 'active' ? 'bg-success' : 'bg-danger'}}">
+                                    {{ $store->store_status }}
                                 </span>
                             </td>
                             <td>
@@ -283,7 +283,7 @@ new class extends Component
                                 @endforeach
                             </ul>
                             <p class="mt-2"><strong>Date of Registration:</strong> {{ $storeInfo->created_at->format('M d, Y') }}</p>
-                            <p><strong>Status:</strong> {{ $storeInfo->status }}</p>
+                            <p><strong>Status:</strong> {{ $storeInfo->store_status }}</p>
                         </div>
                     @else
                     <div class="store-info-loading">

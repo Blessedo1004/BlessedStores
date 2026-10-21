@@ -18,6 +18,7 @@ return [
     'secret_key' => env('PAYSTACK_SECRET_KEY'),
     'public_key' => env('PAYSTACK_PUBLIC_KEY'),
     'payment_url' => 'https://api.paystack.co',
+    'subaccount_percentage_charge' => env('PAYSTACK_SUBACCOUNT_PERCENTAGE_CHARGE', 3),
 ],
 
     'postmark' => [

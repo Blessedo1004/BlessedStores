@@ -163,7 +163,7 @@ new class extends Component
                            <div class="col-md-6">
                               <div class="checkout-form-list">
                                  <label>Name</label>
-                                <input type="text" placeholder="John Doe" required wire:model.live.debounce.500ms="name">
+                                <input type="text" placeholder="John Doe" required wire:model.live.debounce.500ms="name" value="{{ auth()->user() ? auth()->user()->name : '' }}">
                                 @error('name')
                                     <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                                 @enderror
@@ -172,7 +172,7 @@ new class extends Component
                            <div class="col-md-6">
                               <div class="checkout-form-list">
                                  <label>Email Address</label>
-                                <input type="email" placeholder="email@example.com" required wire:model.live.debounce.500ms="email" inputmode="email">
+                                <input type="email" placeholder="email@example.com" required wire:model.live.debounce.500ms="email" inputmode="email" value="{{ auth()->user() ? auth()->user()->email : '' }}">
                                 @error('email')
                                     <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                                 @enderror
@@ -355,10 +355,32 @@ new class extends Component
                                 @endforeach
                               </tbody>
                               <tfoot>
-                                 <!-- <tr class="cart-subtotal">
+                                 <tr class="cart-subtotal">
                                     <th>Cart Subtotal</th>
-                                    <td><span class="amount">$58.00</span></td>
+                                    <td><span class="amount">₦{{ number_format($cartTotal, 2) }}</span></td>
                                  </tr>
+                                 @php
+                                    $rate = 0.015;
+                                    $subtotal = number_format($cartTotal, 2);
+                                    $flatFee =  $subtotal < 2500 ? 0 : 100;
+                                    $feeCap = 2000;
+
+                                    $applicableFee = ($subtotal * $rate) + $flatFee;
+
+                                    if ($applicableFee >= $feeCap) {
+                                       $processingFee = $feeCap;
+                                    } else {
+                                       $total = (($subtotal + $flatFee) / (1 - $rate)) + 0.01;
+                                       $processingFee = round($total - $subtotal, 2);
+                                    }
+
+                                    $grandTotal = $subtotal + $processingFee;
+                                 @endphp
+                                 <tr class="cart-subtotal">
+                                    <th>Payment Processing Fee</th>
+                                    <td><span class="amount">₦{{ $processingFee }}</span></td>
+                                 </tr>
+                                 <!-- 
                                  <tr class="shipping">
                                     <th>Shipping</th>
                                     <td>
@@ -378,7 +400,7 @@ new class extends Component
                                  </tr> -->
                                  <tr class="order-total">
                                     <th>Order Total</th>
-                                    <td><strong><span class="amount">₦{{ number_format($cartTotal, 2) }}</span></strong>
+                                    <td><strong><span class="amount">₦{{ $grandTotal }}</span></strong>
                                     </td>
                                  </tr>
                               </tfoot>

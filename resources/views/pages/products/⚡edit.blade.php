@@ -106,7 +106,7 @@ new class extends Component
         $brandsTotal = 0;
 
         if(filled($this->storeTerm)){
-            $query = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->storeTerm) . '%')->where('user_id', auth()->user()->id);
+            $query = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->storeTerm) . '%')->where('user_id', auth()->user()->id)->ready()->active();
             $storesTotal = $query->count();
             $stores = $query->take($this->storeLoadAmount)->orderBy('name', 'asc')->get(['id', 'name']);
         } else {
@@ -296,6 +296,12 @@ new class extends Component
     }
 
     public function setStore(Store $store){
+        abort_unless($store->user_id === auth()->id(), 403);
+        if ($store->payment_setup_status !== 'ready') {
+            $this->addError('store_id', 'Complete payment setup for this store before assigning products to it.');
+            return;
+        }
+
         $this->store_id = $store->id;
         $this->storeTerm = $store->name;
     }
@@ -430,7 +436,22 @@ new class extends Component
 
         $this->validate($this->rules(), $this->messages);
 
+        $eligibleStore = auth()->user()->stores()
+            ->whereKey($this->store_id)
+            ->where('payment_setup_status', 'ready')
+            ->first();
+        if (! $eligibleStore) {
+            $this->addError('update', 'Complete payment setup for the selected store before updating this product.');
+            return;
+        }
+
         return DB::transaction(function () {
+            $store = auth()->user()->stores()->whereKey($this->store_id)->lockForUpdate()->first();
+            if (! $store || $store->payment_setup_status !== 'ready') {
+                $this->addError('update', 'Complete payment setup for the selected store before updating this product.');
+                return;
+            }
+
             if (filled($this->name)) {
                 $this->product->name = $this->name;
             }

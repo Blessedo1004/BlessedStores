@@ -93,7 +93,7 @@ new class extends Component
             'selectedCategories' => [
             'nullable',
             'array',
-            'max:5',
+            'max:10',
             ]
         ];
     }
@@ -147,8 +147,8 @@ new class extends Component
 
     public function setCategory(Category $category){
         $this->removeAlert = false;
-        if (count($this->selectedCategories) >= 5) {
-            $this->addError('categories', 'You can select a maximum of 5 categories.');
+        if (count($this->selectedCategories) >= 10) {
+            $this->addError('categories', 'You can select a maximum of 10 categories.');
             return;
         }
         if (!in_array($category->id, $this->selectedCategories, true)) {

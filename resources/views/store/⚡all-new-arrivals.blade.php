@@ -43,6 +43,10 @@ new class extends Component
 
     public function showQuickView(string $slug): void
     {
+        $this->quickViewAction = false;
+        $this->quickViewAlertType = null;
+        $this->quickViewAlertMessage = null;
+        session()->forget(['success', 'error']);
         $this->quickViewProduct = null;
         $this->selectedVariantId = null;
         $this->quickViewProduct = Product::with(['productImages', 'brand', 'categories', 'productVariants.size', 'store:id,slug,name'])

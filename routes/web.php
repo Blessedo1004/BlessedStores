@@ -30,6 +30,7 @@ Route::group(['middleware' => ['auth', 'cache.headers:no_store,private', 'auth.s
    Route::livewire('/dashboard', '⚡dashboard')->name('dashboard');
    Route::livewire('/stores', 'stores.⚡index')->name('stores')->middleware(['can:admin-super-admin-or-store']);
    Route::livewire('/stores/edit/{slug}', 'stores.⚡edit')->name('stores.edit')->middleware(['can:admin-super-admin-or-store']);
+    Route::livewire('/stores/settlement', 'stores.⚡store-settlement')->name('stores.settlement')->middleware(['can:store']);
    Route::livewire('/store-applications', 'stores.⚡applications')->name('store-applications')->middleware(['can:admin-or-super-admin']);
    Route::livewire('/admins', 'admins.⚡index')->name('admins')->middleware(['can:super-admin']);
    Route::livewire('/admins/create', 'admins.⚡create')->name('admins.create')->middleware(['can:super-admin']);
@@ -45,6 +46,6 @@ Route::group(['middleware' => ['auth', 'cache.headers:no_store,private', 'auth.s
    Route::livewire('/categories/edit/{slug}', 'categories.⚡edit')->name('categories.edit')->middleware(['can:super-admin']);
 });
 
-Route::get('/payment', [PaymentController::class, 'showForm'])->name('payment.form');
-Route::post('/pay', [PaymentController::class, 'initialize'])->name('payment.initialize');
+// Route::get('/payment', [PaymentController::class, 'showForm'])->name('payment.form');
+// Route::post('/pay', [PaymentController::class, 'initialize'])->name('payment.initialize');
 Route::get('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');

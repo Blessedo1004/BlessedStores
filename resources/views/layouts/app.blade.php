@@ -25,6 +25,59 @@
 </head>
 <body>
 
+    @php
+        $storesNeedingPaymentSetup = auth()->user()?->can('store')
+            ? auth()->user()->stores()
+                ->where('payment_setup_status', '!=', 'ready')
+                ->orderBy('name')
+                ->get(['id', 'name', 'payment_setup_status', 'paystack_subaccount_code'])
+            : collect();
+    @endphp
+
+    @if($storesNeedingPaymentSetup->isNotEmpty() && !request()->routeIs('stores.settlement'))
+        <div
+            id="settlementReminderModal"
+            class="store-info-overlay settlement-reminder"
+            role="presentation"
+        >
+            <section class="store-info-panel" role="dialog" aria-modal="true" aria-labelledby="settlement-reminder-title">
+                <header class="store-info-panel-header">
+                    <div>
+                        <span class="badge text-bg-warning mb-2">Action needed</span>
+                        <h2 id="settlement-reminder-title" class="store-info-panel-title">Complete your store settlement setup</h2>
+                    </div>
+                    <button type="button" class="store-info-close" aria-label="Close reminder" data-dismiss-settlement-reminder>×</button>
+                </header>
+
+                <div class="store-info-panel-body">
+                    <div class="store-info-card">
+                        <p>Complete settlement setup for each store below to enable product listings and prepare the store to receive payments.</p>
+
+                        <ul class="list-group list-group-flush mb-4">
+                            @foreach($storesNeedingPaymentSetup as $storeNeedingSetup)
+                                <li class="list-group-item px-0 bg-transparent">
+                                    <div class="fw-semibold">{{ $storeNeedingSetup->name }}</div>
+                                    @if($storeNeedingSetup->payment_setup_status === 'requires_review')
+                                        <small class="text-warning-emphasis">Contact Blessed Stores Support to verify and review its subaccount in the Paystack Dashboard.</small>
+                                    @elseif($storeNeedingSetup->payment_setup_status === 'processing')
+                                        <small class="text-muted">Settlement setup is processing. Please do not submit another request.</small>
+                                    @else
+                                        <small class="text-muted">Settlement setup is {{ str_replace('_', ' ', $storeNeedingSetup->payment_setup_status) }}.</small>
+                                    @endif
+                                </li>
+                            @endforeach
+                        </ul>
+
+                        <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+                            <button type="button" class="btn btn-outline-secondary" data-dismiss-settlement-reminder>Remind me later</button>
+                            <a class="btn btn-dark" href="{{ route('stores.settlement') }}" wire:navigate data-dismiss-settlement-reminder>Go to Payment Setup</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    @endif
+
     @if(session('login-success'))
         <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-9 col-md-5 position-fixed align-items-center" wire:transition>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0.5">
@@ -79,6 +132,12 @@
                     </a>
                     
                     @can('store')
+                        <a href="{{ route('stores.settlement') }}" class="nav-link {{ request()->routeIs('stores.settlement') ? 'active' : ''}}" wire:navigate>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M5 6h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm3 9h4" />
+                            </svg>
+                            <span>Payment Setup</span>
+                        </a>
                       <a href="{{ route('products') }}" class="nav-link {{ request()->routeIs('products') || request()->routeIs('products.create') || request()->routeIs('products.edit') ? 'active' : ''}}" wire:navigate>
                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -225,6 +284,26 @@
     <script src="{{asset('js/slick.min.js')}}"></script>
      <script src="{{asset('js/main.js')}}"></script>
     @livewireScripts
+    <script>
+        (() => {
+            const modal = document.getElementById('settlementReminderModal');
+            if (!modal) return;
+
+            const dismiss = () => {
+                modal.hidden = true;
+            };
+
+            modal.querySelectorAll('[data-dismiss-settlement-reminder]').forEach((button) => {
+                button.addEventListener('click', dismiss);
+            });
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) dismiss();
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !modal.hidden) dismiss();
+            });
+        })();
+    </script>
 </body>
 </html>
           

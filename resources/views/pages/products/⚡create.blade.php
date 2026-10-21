@@ -136,7 +136,7 @@ new class extends Component
         $brandsTotal = 0;
 
         if(filled($this->storeTerm)){
-            $query = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->storeTerm) . '%')->where('user_id', auth()->user()->id)->active();
+            $query = Store::select(['id','name'])->where('name', 'LIKE', '%' . trim($this->storeTerm) . '%')->where('user_id', auth()->user()->id)->ready()->active();
             $storesTotal = $query->count();
             $stores = $query->take($this->storeLoadAmount)->orderBy('name', 'asc')->get(['id', 'name']);
         }
@@ -319,6 +319,7 @@ new class extends Component
     }
 
     public function setStore(Store $store){
+        abort_unless($store->user_id === auth()->id() && $store->payment_setup_status === 'ready', 403);
         $this->store_id = $store->id;
         $this->storeTerm = $store->name;
     }
@@ -379,6 +380,15 @@ new class extends Component
             abort(403);
         }
 
+        $eligibleStore = auth()->user()->stores()
+            ->whereKey($this->store_id)
+            ->where('payment_setup_status', 'ready')
+            ->first();
+        if (! $eligibleStore) {
+            $this->addError('create', 'Complete payment setup for your store before adding products.');
+            return;
+        }
+
         $user = auth()->user();
         $key = 'create-product:' . $user->id . ':' . request()->ip();
        
@@ -397,6 +407,12 @@ new class extends Component
         $this->validate($this->rules(), $this->messages);
 
         return DB::transaction(function () {
+            $store = auth()->user()->stores()->whereKey($this->store_id)->lockForUpdate()->first();
+            if (! $store || $store->payment_setup_status !== 'ready') {
+                $this->addError('create', 'Complete payment setup for your store before adding products.');
+                return;
+            }
+
             $product = new Product();
             $product->name = $this->name;
             $product->description = $this->description;

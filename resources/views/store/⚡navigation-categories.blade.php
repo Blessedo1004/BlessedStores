@@ -19,19 +19,19 @@ new class extends Component
                     $this->categoryIds[] = $category->parent_id;    
                 }
                 $categoryIdCount = count($this->categoryIds);
-                if( $categoryIdCount < 4){
+                if( $categoryIdCount < 10){
                   $extraCategoryIds = Category::mainCategory()->whereNotIn('id', $this->categoryIds)
                   ->inRandomOrder()
-                  ->take(4 - $categoryIdCount )
+                  ->take(10 - $categoryIdCount )
                   ->pluck('id')->toArray(); 
                   $this->categoryIds = array_merge($this->categoryIds , $extraCategoryIds);
                 }
             }
-            $this->userCategories = Category::whereIn('id' , $this->categoryIds)->inRandomOrder()->take(4)->get(['id' , 'name', 'slug']);
+            $this->userCategories = Category::whereIn('id' , $this->categoryIds)->inRandomOrder()->take(10)->get(['id' , 'name', 'slug']);
         }
 
         else{
-            $this->userCategories = Category::mainCategory()->inRandomOrder()->take(4)->get(['id' , 'name', 'slug']);
+            $this->userCategories = Category::mainCategory()->inRandomOrder()->take(10)->get(['id' , 'name', 'slug']);
         }
     }
 };

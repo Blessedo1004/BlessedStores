@@ -72,8 +72,6 @@
                 <span>{{ $reference }}</span>
             </div>
         </div>
-        
-        <a href="{{ route('payment.form') }}" class="btn">Make Another Payment</a>
     </div>
 </body>
 </html>

@@ -1,472 +1,201 @@
-Absolutely. Since you haven't built the full product page yet, the instructions should target the **product quick-view modal/component** instead. Everything else can remain the same.
+# Phase 2: Store Payment Setup and Paystack Subaccount Creation
 
-## Refactor Add Product UI & Cart for Size Variants
+Implement the store payment setup feature in my existing Laravel multi-vendor ecommerce application, BlessedStores.
 
-Refactor the existing **Add Product** functionality in the Laravel ecommerce application.
+## Context
 
-Do **not** create or modify database tables, migrations, Eloquent relationships, or validation rules. I will handle those parts myself.
+- The application uses Laravel and Livewire.
+- Store owners do not necessarily register as users before submitting store applications.
+- An admin reviews and approves store applications. After approval, the application process creates or associates the appropriate user account and store.
+- Stores must complete Paystack payment setup before they can add products.
+- The platform already has its own Paystack account and API credentials.
+- Each store needs its own Paystack subaccount so that the platform can distribute payments to multiple stores using Paystack's dynamic multi-split payments.
+- The `stores` table now has these payment-related columns:
+  - `paystack_subaccount_code`: nullable, unique string.
+  - `payment_setup_status`: enum with `not_started`, `pending`, `processing`, `ready`, `failed`, and `requires_review`; default `not_started`.
+  - `payment_setup_completed_at`: nullable timestamp.
+- The store's existing `status` column has been renamed to `store_status`. Do not confuse the store's operational status with its payment setup status.
 
-Focus only on:
+## Objective
 
-1. Refactoring the **Add Product UI**
-2. Refactoring the corresponding **Edit Product UI**, where necessary
-3. Supporting size-based product variants in the UI
-4. Updating the **product quick-view UI** to support variant selection
-5. Updating the **cart functionality** to correctly handle selected variants
+Allow an authenticated store owner to set up their settlement bank account from their store dashboard. Resolve and confirm the bank account before creating a Paystack subaccount. Save the returned subaccount code and update the store's payment setup status.
 
-Follow the existing project's Laravel, Blade, Livewire, Bootstrap, and JavaScript conventions.
+Do not implement checkout, customer payments, order management, commissions, or dynamic payment splitting in this phase.
 
----
+## 1. Inspect the existing project first
 
-# 1. Add Product UI
+Before making changes:
 
-Refactor the existing Add Product form into clear sections instead of one large form.
+- Inspect the existing store model, migrations, authentication, roles, permissions, store ownership relationships, Livewire components, layouts and dashboard navigation.
+- Identify how a logged-in store owner is associated with their store.
+- Reuse the project's existing conventions and components.
+- Do not create duplicate models, tables, layouts or payment services unnecessarily.
+- Do not modify the existing store application approval workflow unless necessary for this phase.
 
-### Product Information
+## 2. Store dashboard payment setup UI
 
-Keep the existing product information fields, such as:
+Add a Payment Setup section to the existing store owner's dashboard.
 
-* Product name
-* Description
-* Brand
-* Category
-* Product images
-* Any other existing product fields already part of the application
+The interface should:
 
-Do not remove existing functionality unnecessarily.
+- Display the current payment setup status.
+- Allow the store owner to select a bank and enter their account number.
+- Provide a button to resolve the account.
+- Display the resolved account holder's name after a successful lookup.
+- Require the store owner to confirm that the returned name matches their intended settlement account.
+- Provide a separate action to create the Paystack subaccount after confirmation.
+- Show appropriate loading states, validation messages, API errors and success messages.
+- Prevent repeated submissions while a request is processing.
+- Display the existing subaccount status when setup has already been completed.
+- Avoid exposing the Paystack secret key or unnecessary bank details.
 
----
+Follow the existing project's UI conventions and ensure the interface works on mobile and desktop.
 
-# 2. Product Type / Size Selection
+## 3. Bank listing and account resolution
 
-Add a clear section asking the store owner:
+Use Paystack's official API documentation:
 
-> **Does this product come in different sizes?**
+- List Banks: https://paystack.com/docs/api/bank/
+- Resolve Account Number: https://paystack.com/docs/api/verification/#resolve-account-number
 
-Provide two options:
+Requirements:
 
-```text
-○ No
-  This product has one price and stock quantity.
+- Fetch supported banks from Paystack using a backend service.
+- Populate the bank selector with the returned bank names and codes.
+- Resolve the account using the selected bank code and account number.
+- Display the returned account holder's name.
+- Require explicit confirmation before allowing subaccount creation.
+- If the bank or account number changes, invalidate the previous resolution and confirmation.
+- Validate the account number and bank selection on the server.
+- Handle API failures, invalid account details, timeouts and rate limits gracefully.
+- Do not trust client-submitted account names or resolution results.
 
-○ Yes
-  Each size can have its own price and stock quantity.
-```
+Do not hardcode bank lists or invent API response fields. Follow Paystack's current documentation.
 
-Do not expose technical terminology such as `product_variants` to the store owner.
+## 4. Paystack service
 
-The store owner should think of this as simply deciding whether the product has different sizes.
+Create or extend a dedicated Paystack service following the project's existing architecture.
 
----
+Use the configured Paystack secret key from Laravel configuration. Never expose it to Livewire's frontend or browser JavaScript.
 
-# 3. Product Without Sizes
+Implement separate methods for:
 
-When the store owner selects **No**, display the normal product pricing/inventory fields:
+- Fetching supported banks.
+- Resolving a bank account.
+- Creating a subaccount.
 
-```text
-Price
-[ ₦              ]
+Use Paystack's official Create Subaccount API:
 
-Quantity
-[                ]
+https://paystack.com/docs/api/subaccount/#create
 
-Weight
-[                ]
+Pass the required business name, bank code, account number, and other required fields according to the current API documentation.
 
-SKU
-[                ]
-```
+Use the appropriate settlement configuration for the platform's intended dynamic multi-split payment architecture. Do not invent unsupported parameters or assume that a particular percentage or flat-split configuration is required at subaccount creation.
 
-These are the normal product-level fields already used by the application.
+## 5. Create and persist the subaccount
 
-The existing Add Product behavior should continue to work for products without sizes.
+When the store owner confirms the resolved account name and requests subaccount creation:
 
----
+1. Verify that the authenticated user owns or is authorized to manage the store.
+2. Confirm that payment setup is not already completed.
+3. Validate the submitted bank details on the server.
+4. Confirm that the account resolution is still valid for the submitted bank and account number.
+5. Mark payment setup as `processing`.
+6. Call Paystack to create the subaccount.
+7. Validate the API response and extract the actual returned subaccount code.
+8. Save the subaccount code to `stores.paystack_subaccount_code`.
+9. Update the payment setup status based on the response and the verification requirements established for this integration.
+10. Set `payment_setup_completed_at` only when the store meets the application's defined readiness requirements.
 
-# 4. Product With Sizes
+Handle timeouts carefully. If the request times out after Paystack may have created the subaccount, do not blindly create another one. Record the issue, check for an existing subaccount where possible, and allow safe recovery.
 
-When the store owner selects **Yes**, replace the normal product-level pricing/inventory interface with a dynamic **Sizes** section.
+Use appropriate database transactions for local persistence. Do not keep a database transaction open while waiting for Paystack's network request.
 
-The UI should look approximately like:
+## 6. Status handling
 
-```text
-Sizes
+Use the existing `payment_setup_status` values consistently:
 
-Add the sizes available for this product.
+- `not_started`: no setup attempt has been made.
+- `pending`: setup has been requested but has not yet been processed.
+- `processing`: a setup request is currently being processed.
+- `ready`: the subaccount satisfies the application's confirmed requirements for payment setup.
+- `failed`: setup failed and can be retried after addressing the problem.
+- `requires_review`: the outcome is ambiguous or requires administrative intervention.
 
-┌───────────────────────────────────────────────────────┐
-│ Size       Price       Quantity      Weight      SKU  │
-├───────────────────────────────────────────────────────┤
-│ Small      ₦15,000     10            0.30kg      ...  │
-│ Medium     ₦16,000     7             0.35kg      ...  │
-│ Large      ₦17,000     3             0.40kg      ...  │
-└───────────────────────────────────────────────────────┘
+Do not assume that a successful subaccount creation automatically means the account is verified or eligible for every settlement operation.
 
-[ + Add another size ]
-```
+Paystack may return `active` and `is_verified` fields. Handle these according to the current documentation and the platform's confirmed requirements. Do not automatically mark an unverified subaccount as unusable without establishing that this is required.
 
-Each row represents one size option.
+If manual verification in the Paystack Dashboard is necessary, preserve the returned subaccount code and provide an appropriate status and recovery path rather than creating duplicate subaccounts.
 
-The store owner should be able to:
+## 7. Security and authorization
 
-* select a size
-* enter the price for that size
-* enter the quantity for that size
-* enter the weight for that size
-* enter the SKU for that size
-* add another size
-* remove a size
+- Only an authenticated user authorized to manage a store may modify that store's payment setup.
+- Never accept a store ID from the client without checking ownership or permissions.
+- Never trust client-submitted account names or confirmation flags without validating the server-side state.
+- Prevent duplicate or concurrent subaccount creation attempts.
+- Do not log secret keys, full bank account numbers or sensitive API payloads.
+- Validate all inputs server-side.
+- Use Laravel's configured HTTP client, timeouts and error handling.
+- Follow existing authorization and validation conventions.
 
-Prevent the UI from allowing the same size to be selected twice.
+## 8. Product creation restriction
 
-Use the existing size data in the application rather than hard-coding sizes.
+Inspect the existing product creation authorization and Livewire actions.
 
----
+Ensure that a store cannot add products until `payment_setup_status` is `ready`.
 
-# 5. Dynamic UI Behavior
+Enforce this server-side in the relevant product creation actions and endpoints, not only by hiding the Add Product button.
 
-Use the existing Livewire setup for dynamic behavior.
+Do not unnecessarily restrict existing store profile management or unrelated dashboard functionality.
 
-When the store owner switches between:
+Do not refactor the entire product system. Make only the changes necessary to enforce this requirement.
 
-```text
-No
-```
+## 9. Configuration and environment
 
-and:
+Reuse the project's existing Paystack configuration if available. Otherwise, add a suitable configuration entry that reads the secret key from `.env`.
 
-```text
-Yes
-```
+For example, use a configuration key such as `services.paystack.secret_key`, but follow the existing project conventions if they differ.
 
-the appropriate pricing/inventory interface should appear.
+Do not hardcode credentials. Do not modify production credentials or switch the application to live mode as part of this implementation.
 
-When the store owner clicks:
+## 10. Testing
 
-```text
-+ Add another size
-```
+Add appropriate tests following the project's existing testing framework.
 
-a new size row should appear without unnecessarily reloading the entire page.
+Cover:
 
-When a size row is removed, the remaining rows should continue working correctly.
+- Fetching the bank list.
+- Successful account resolution.
+- Invalid bank or account details.
+- Account name confirmation.
+- Invalidating confirmation when account details change.
+- Successful subaccount creation.
+- Paystack API failures and timeouts.
+- Preventing duplicate subaccount creation.
+- Store ownership and authorization.
+- Saving the correct subaccount code and statuses.
+- Preventing product creation when payment setup is not ready.
+- Allowing product creation when payment setup is ready.
 
-Keep the implementation clean and simple.
+Mock Paystack HTTP requests in automated tests. Do not make real API calls from the test suite.
 
----
+## Constraints
 
-# 6. Product Editing
+- Inspect the codebase before editing.
+- Preserve existing application architecture and conventions.
+- Avoid unnecessary migrations, dependencies, refactors and duplicated logic.
+- Do not implement customer checkout, payments, commissions, order tables, or multi-split payment processing in this phase.
+- Do not change the existing store approval and user account creation process unless absolutely necessary.
+- Run relevant tests and report any failures.
 
-Apply the same concept to the existing Edit Product interface.
+## Expected deliverable
 
-For a product without sizes, show:
+Implement the complete store payment setup feature, including any necessary migrations, backend service methods, Livewire UI, validation, authorization, status handling, product creation restrictions and automated tests.
 
-```text
-Price
-Quantity
-Weight
-SKU
-```
-
-For a product with sizes, show the existing size rows:
-
-```text
-Size       Price       Quantity       Weight       SKU
-Small      ₦15,000     10             0.30kg      ...
-Medium     ₦16,000     7              0.35kg      ...
-Large      ₦17,000     3              0.40kg      ...
-```
-
-Allow the store owner to:
-
-* edit existing sizes
-* change prices
-* change quantities
-* change weights
-* change SKUs
-* add another size
-* remove a size
-
-Preserve the existing product editing functionality.
-
----
-
-# 7. Product Quick View
-
-Do **not** build or modify a full product page. A full product page has not been implemented yet.
-
-Instead, update the existing **product quick-view UI/modal** (which exists currently in views/store/new_arrivals) so that products with sizes allow the customer to select a size before adding the product to the cart.
-
-For example:
-
-```text
-┌──────────────────────────────────────────────┐
-│ Product Image                                │
-│                                              │
-│ Cotton T-Shirt                               │
-│                                              │
-│ Size:                                        │
-│ [ Small ] [ Medium ] [ Large ] [ XL ]       │
-│                                              │
-│ Price: ₦16,000                               │
-│                                              │
-│ Quantity: [-] 1 [+]                          │
-│                                              │
-│ [ Add to Cart ]                              │
-└──────────────────────────────────────────────┘
-```
-
-For products without sizes, the size selection should not appear.
-
-The quick view should continue displaying the normal product information that it currently displays.
-
----
-
-# 8. Quick View Variant Behavior
-
-When the customer selects a size:
-
-* visually indicate the selected size
-* update the displayed price
-* update the available quantity/stock information if the quick view currently displays stock information
-* keep track of the selected variant
-
-For example:
-
-```text
-Small  → ₦15,000
-Medium → ₦16,000
-Large  → ₦17,000
-```
-
-Selecting **Medium** should cause the quick view to display:
-
-```text
-Size: Medium
-Price: ₦16,000
-```
-
-Do not expose the internal variant database ID to the customer.
-
----
-
-# 9. Quick View Add to Cart
-
-For a product without sizes:
-
-```text
-Product → Add to Cart
-```
-
-Continue using the existing behavior.
-
-For a product with sizes:
-
-The customer must select a size before adding the product to the cart.
-
-The selected variant must be passed to the existing cart logic.
-
-For example:
-
-```text
-Cotton T-Shirt
-Size: Medium
-Quantity: 2
-```
-
-should add the **Medium variant**, not merely the base product.
-
----
-
-# 10. Cart Display
-
-Update the cart UI so that when an item has a size variant, the selected size is displayed.
-
-Example:
-
-```text
-Cotton T-Shirt
-
-Size: Medium
-Price: ₦16,000
-Quantity: 2
-
-[-] 2 [+]
-```
-
-For products without sizes, continue displaying the existing product information without a size.
-
----
-
-# 11. Cart Quantity Updates
-
-Make sure quantity updates continue to work correctly for variant products.
-
-For example:
-
-```text
-Cotton T-Shirt
-Size: Medium
-
-Quantity: 2
-```
-
-Increasing the quantity should increase the quantity of the **Medium variant**, not the product's general quantity.
-
-Likewise, removing the cart item should remove that specific variant from the cart.
-
----
-
-# 12. Cart Price Calculation
-
-When calculating the cart total:
-
-```text
-No variant:
-product price × cart quantity
-
-With variant:
-variant price × cart quantity
-```
-
-Do not use the base product price for a variant cart item.
-
----
-
-# 13. Cart Item Uniqueness
-
-The cart must distinguish between different sizes of the same product.
-
-These should be separate cart items:
-
-```text
-Cotton T-Shirt — Small
-Cotton T-Shirt — Medium
-Cotton T-Shirt — Large
-```
-
-But adding the same product and same size again should increase the existing cart item's quantity instead of creating another duplicate item.
-
-For example:
-
-```text
-Cotton T-Shirt — Medium × 1
-```
-
-followed by another:
-
-```text
-Cotton T-Shirt — Medium × 1
-```
-
-should result in:
-
-```text
-Cotton T-Shirt — Medium × 2
-```
-
----
-
-# 14. Keep Existing Cart Architecture
-
-Do not rewrite the entire cart system unnecessarily.
-
-Work with the existing cart implementation and make the smallest clean changes necessary to support:
-
-* products without sizes
-* products with sizes
-* selected variant IDs
-* variant-specific prices
-* variant-specific quantities
-* separate cart items for different sizes
-
-Preserve all existing cart functionality unrelated to variants.
-
----
-
-# 15. Shipping
-
-Do **not** implement shipping functionality as part of this refactor.
-
-Do not add:
-
-* shipping calculations
-* shipping methods
-* delivery fees
-* delivery zones
-* tracking
-* shipping providers
-* delivery addresses
-
-Weight is currently just a product/variant attribute. It should not trigger any shipping logic.
-
----
-
-# 16. Overall UX Goal
-
-The store owner should experience the process as:
-
-### Simple product
-
-```text
-Add Product
-
-Product information...
-
-Does this product come in different sizes?
-
-○ No
-○ Yes
-
-Price: ₦15,000
-Quantity: 20
-Weight: 0.35kg
-SKU: TSH-001
-
-[Add Product]
-```
-
-### Size-based product
-
-```text
-Add Product
-
-Product information...
-
-Does this product come in different sizes?
-
-○ No
-● Yes
-
-Sizes
-
-Size       Price       Quantity      Weight      SKU
-Small      ₦15,000     10            0.30kg      TSH-S
-Medium     ₦16,000     7             0.35kg      TSH-M
-Large      ₦17,000     3             0.40kg      TSH-L
-
-[+ Add another size]
-
-[Add Product]
-```
-
-The customer then interacts with the product through the **quick-view modal**:
-
-```text
-Cotton T-Shirt
-
-Size:
-[ Small ] [ Medium ] [ Large ]
-
-Price: ₦16,000
-
-Quantity: [-] 1 [+]
-
-[ Add to Cart ]
-```
-
-The selected size determines the price and the specific inventory that the cart operates on.
-
-Keep the UI intuitive, avoid unnecessary complexity, and reuse the application's existing components and styling wherever possible.
-
-This keeps the scope exactly where you want it: **Add Product → Edit Product → Quick View → Cart**, while you handle the underlying database/model/validation work yourself.
+At the end, summarize:
+1. Files created or modified.
+2. Any migrations required.
+3. Environment configuration required.
+4. How to test the feature locally.
+5. Any Paystack Dashboard verification steps that still require manual action.

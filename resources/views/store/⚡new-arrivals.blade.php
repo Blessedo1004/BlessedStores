@@ -78,6 +78,10 @@ new class extends Component
     }
 
     public function showQuickView($slug){
+        $this->quickViewAction = false;
+        $this->quickViewAlertType = null;
+        $this->quickViewAlertMessage = null;
+        session()->forget(['success', 'error']);
         $this->selectedVariantId = null;
         $this->quickViewQuantity = 1;
         $this->quickViewProduct = Product::with('productImages', 'brand', 'categories', 'productVariants.size', 'store:id,slug,name')
@@ -245,6 +249,10 @@ new class extends Component
                         </button>
 
                         <div class="modal__inner">
+                            <div class="store-info-loading" wire:loading wire:target="showQuickView">
+                                <span class="store-search-results-status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Loading product details...</span>
+                            </div>
+                            <div wire:loading.remove wire:target="showQuickView">
                             @if($quickViewAlertMessage)
                                 @if($quickViewAlertType === 'success')
                                     <div class="alert alert-success border-0 shadow-sm mb-4 p-3 d-flex gap-2 small justify-content-center col-lg-6 mx-auto d-block align-items-center" wire:transition>
@@ -267,10 +275,6 @@ new class extends Component
                                     </div>
                                 @endif
                             @endif
-                            <div class="store-info-loading" wire:loading wire:target="showQuickView">
-                                <span class="store-search-results-status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Loading product details...</span>
-                            </div>
-                            <div wire:loading.remove wire:target="showQuickView">
                             @if($quickViewProduct)
                                 @php
                                     $selectedVariant = $quickViewProduct->productVariants->firstWhere('id', $this->selectedVariantId);

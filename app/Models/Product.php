@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 
 class Product extends Model
 {
-    protected $fillable = ['store_id','user_id', 'name', 'quantity', 'price', 'slug', 'description', 'weight', 'sku', 'brand_id'];
+    protected $fillable = ['store_id','user_id', 'name', 'quantity', 'price', 'slug', 'description', 'weight', 'sku', 'brand_id', 'delivery_information'];
 
     public function store(){
         return $this->belongsTo(Store::class);

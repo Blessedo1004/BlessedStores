@@ -223,6 +223,7 @@ new class extends Component
                         <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search products by name" wire:model.live.debounce.500ms="searchTerm" inputmode="search">
                     </div>
 
+                    @if(auth()->user()->stores()->where('payment_setup_status', 'ready')->exists())
                     <div class="col-12 col-md-6 mt-4 mt-lg-0 text-center">
                         <a class="fill-btn border-0" href="{{ route('products.create') }}"  wire:navigate>                        
                             <span class="fill-btn-inner">
@@ -231,6 +232,11 @@ new class extends Component
                             </span>
                         </a>
                     </div>
+                    @else
+                    <div class="col-12 col-md-6 mt-4 mt-lg-0 text-center">
+                        <a class="btn btn-outline-dark" href="{{ route('stores.settlement') }}" wire:navigate>Complete Payment Setup to Add Products</a>
+                    </div>
+                    @endif
                 </div>
 
             </div>

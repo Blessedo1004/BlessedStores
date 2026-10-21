@@ -2705,6 +2705,24 @@ PAGINATION CSS START
   max-height: 20vh;
   overflow-y:auto;
 }
+
+.mean-nav ul{
+  max-height: 20vh;
+  overflow-y: auto;
+}
+.main-menu > nav > ul {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  max-width: 35vw;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.main-menu > nav > ul > li {
+  flex: 0 0 auto;
+}
 .main-menu ul li .submenu li {
   display: block;
   width: 100%;
@@ -3108,7 +3126,7 @@ PAGINATION CSS START
 
 @media (max-width: 575px), only screen and (min-width: 576px) and (max-width: 767px), only screen and (min-width: 992px) and (max-width: 1199px) {
   .header-logo {
-    max-width: 145px;
+    max-width: 200px;
   }
 }
 @media (max-width:450px) {
