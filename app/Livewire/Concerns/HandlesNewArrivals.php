@@ -17,7 +17,7 @@ trait HandlesNewArrivals
         )
         ->visible()
         ->inStock()
-        ->where('created_at', '>=', now()->subMonth());
+        ->where('created_at', '>=', now()->subMonths(2));
 
         $categoryIds = [];
 

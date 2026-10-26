@@ -59,6 +59,45 @@ input[type="number"] {
 textarea{
     resize: none;
 }
+
+.product-description-editor__content {
+    min-height: 280px;
+    overflow-y: auto;
+    font-size: 1rem;
+}
+
+.product-description-editor__content:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(177, 139, 94, 0.08);
+}
+
+.product-description-editor__content p:last-child {
+    margin-bottom: 0;
+}
+
+.product-description-editor__content ul,
+.product-description-editor__content ol {
+    padding-left: 1.5rem;
+}
+
+.product-description-editor__toolbar > .btn {
+    min-width: 44px;
+    min-height: 42px;
+    font-weight: 600;
+}
+
+.product-description-editor__toolbar > .btn.is-active {
+    color: #fff;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(177, 139, 94, 0.18);
+}
+
+.product-description-editor__toolbar > .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 .auth-card{
     max-height: 90vh;
     overflow-y: auto;

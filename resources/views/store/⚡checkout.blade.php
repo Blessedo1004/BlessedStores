@@ -1,7 +1,8 @@
 <?php
 
 use App\Services\CartService;
-use App\Services\PaystackService;
+use App\Services\OrderCreationService;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -20,6 +21,9 @@ new class extends Component
     public string $email = '';
     public string $phone_number = '';
     public string $postal_code = '';
+    public ?string $createdOrderId = null;
+    public float $processingFee = 0;
+    public float $estimatedTotal = 0;
 
     public function updated($property)
     {
@@ -61,52 +65,31 @@ new class extends Component
             ->all();
 
         $this->cartTotal = array_sum(array_column($this->cartItems, 'line_total'));
+        $feeRate = 1.5;
+        $this->processingFee = $this->cartTotal > 0
+            ? round($this->cartTotal * ($feeRate / 100), 2)
+            : 0.0;
+        $this->estimatedTotal = $this->cartTotal + $this->processingFee;
     }
 
-    public function paystackRedirect(PaystackService $paystack, CartService $cartService)
+   public function createOrder(OrderCreationService $orderCreationService)
     {
+      if ($this->createdOrderId) {
+         return;
+      }
+
         $validated = $this->validate();
-        $items = $cartService->items();
-
-        if ($items->isEmpty()) {
-            $this->addError('payment', 'Your cart is empty. Add an item before placing your order.');
-            return;
-        }
-
-        // Recalculate from server-side cart data rather than trusting Livewire state.
-        $amount = (float) $items->sum(fn ($item) => $item->price * $item->quantity);
-        if ($amount < 100) {
-            $this->addError('payment', 'The minimum payment amount is ₦100.');
-            return;
-        }
-
-        $metadata = [
-            'name' => $validated['name'],
-            'phone' => $validated['phone_number'],
-            'address' => $validated['address'],
-            'city' => $validated['city'],
-            'state' => $validated['state'],
-            'postal_code' => $validated['postal_code'] ?? null,
-        ];
-        session(['payment_details' => $metadata + ['email' => $validated['email']]]);
 
         try {
-            $response = $paystack->initializeTransaction([
-                'email' => $validated['email'],
-                'amount' => (int) round($amount * 100),
-                'metadata' => $metadata,
-                'callback_url' => route('payment.callback'),
-            ]);
-
-            $authorizationUrl = data_get($response, 'data.authorization_url');
-            if (! data_get($response, 'status') || ! is_string($authorizationUrl) || $authorizationUrl === '') {
-                throw new \RuntimeException('Paystack did not return a payment URL.');
-            }
-
-            return $this->redirect($authorizationUrl);
-        } catch (\Throwable $exception) {
+         $order = $orderCreationService->create($validated, auth()->id());
+         $this->createdOrderId = $order->order_id;
+         $this->cartItems = [];
+         $this->cartTotal = 0;
+      } catch (ValidationException $exception) {
+         throw $exception;
+      } catch (\Throwable $exception) {
             report($exception);
-            $this->addError('payment', 'Unable to start payment right now. Please try again.');
+         $this->addError('payment', 'We could not create your order. Your cart has been preserved; please try again.');
         }
     }
 };
@@ -137,9 +120,16 @@ new class extends Component
       <!-- Breadcrumb area start  -->
 
       <!-- checkout-area start -->
+      @island
       <section class="checkout-area section-space">
          <div class="container">
-            <form wire:submit="paystackRedirect">
+            @if($createdOrderId)
+               <div class="alert alert-success border-0 shadow-sm p-4" role="status">
+                  <h3 class="h5 fw-bold">Order placed</h3>
+                  <p class="mb-0">Thank you for your order. We will keep your selected items reserved while we prepare the next steps.</p>
+               </div>
+            @else
+            <form wire:submit="createOrder">
                <div class="row">
                   <div class="col-lg-6">
                      <div class="checkbox-form">
@@ -359,27 +349,6 @@ new class extends Component
                                     <th>Cart Subtotal</th>
                                     <td><span class="amount">₦{{ number_format($cartTotal, 2) }}</span></td>
                                  </tr>
-                                 @php
-                                    $rate = 0.015;
-                                    $subtotal = number_format($cartTotal, 2);
-                                    $flatFee =  $subtotal < 2500 ? 0 : 100;
-                                    $feeCap = 2000;
-
-                                    $applicableFee = ($subtotal * $rate) + $flatFee;
-
-                                    if ($applicableFee >= $feeCap) {
-                                       $processingFee = $feeCap;
-                                    } else {
-                                       $total = (($subtotal + $flatFee) / (1 - $rate)) + 0.01;
-                                       $processingFee = round($total - $subtotal, 2);
-                                    }
-
-                                    $grandTotal = $subtotal + $processingFee;
-                                 @endphp
-                                 <tr class="cart-subtotal">
-                                    <th>Payment Processing Fee</th>
-                                    <td><span class="amount">₦{{ $processingFee }}</span></td>
-                                 </tr>
                                  <!-- 
                                  <tr class="shipping">
                                     <th>Shipping</th>
@@ -398,10 +367,13 @@ new class extends Component
                                        </ul>
                                     </td>
                                  </tr> -->
+                                 <tr class="processing-fee">
+                                    <th>Paystack fee</th>
+                                    <td><span class="amount">₦{{ number_format($processingFee, 2) }}</span></td>
+                                 </tr>
                                  <tr class="order-total">
-                                    <th>Order Total</th>
-                                    <td><strong><span class="amount">₦{{ $grandTotal }}</span></strong>
-                                    </td>
+                                    <th>Estimated total</th>
+                                    <td><strong><span class="amount">₦{{ number_format($estimatedTotal, 2) }}</span></strong></td>
                                  </tr>
                               </tfoot>
                            </table>
@@ -467,9 +439,9 @@ new class extends Component
                            <div class="order-button-payment mt-20">
                               <button class="fill-btn" type="submit" wire:loading.attr="disabled">
                                  <span class="fill-btn-inner">
-                                 <span class="fill-btn-normal" wire:loading.remove>Continue to payment</span>
-                                 <span class="fill-btn-hover" wire:loading.remove>Continue to payment</span>
-                                 <span wire:loading>Preparing payment...</span>
+                                 <span class="fill-btn-normal" wire:loading.remove wire:target="createOrder">Place order</span>
+                                 <span class="fill-btn-hover" wire:loading.remove wire:target="createOrder">Place order</span>
+                                 <span wire:loading wire:target="createOrder">Creating order...</span>
                                  </span>
                               </button>
                            </div>
@@ -478,7 +450,9 @@ new class extends Component
                   </div>
                </div>
             </form>
+            @endif
          </div>
       </section>
+      @endisland
       <!-- checkout-area end -->
 </div>

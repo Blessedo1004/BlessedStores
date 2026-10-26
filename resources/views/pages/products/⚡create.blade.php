@@ -21,6 +21,7 @@ new class extends Component
     public ?int $quantity = null;
     public ?string $price = '';
     public string $description = '';
+    public string $delivery_information = '';
     public string $sku='';
     public string $weight = '';
     public $image;
@@ -216,10 +217,15 @@ new class extends Component
             'description' => [
                 'required',
                 'string',
-                'min:10',
-                'max:200',
-                'regex:/^[^<>]*$/',
+                'max:10000',
+                function ($attribute, $value, $fail) {
+                    $plainText = trim(html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                    if ($plainText === '') {
+                        $fail('Please enter a product description.');
+                    }
+                },
             ],
+            'delivery_information' => ['nullable', 'string', 'max:10000'],
             'product_images' => [
                 'required',
                 'array',
@@ -416,6 +422,7 @@ new class extends Component
             $product = new Product();
             $product->name = $this->name;
             $product->description = $this->description;
+            $product->delivery_information = filled($this->delivery_information) ? $this->delivery_information : null;
             $product->store_id = $this->store_id;
             $product->visibility = $this->visibility;
             $product->price = $this->hasSizes ? null : $this->price;
@@ -640,7 +647,7 @@ new class extends Component
                         @endif
 
                         <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold text-dark small mb-2">Store</label>
+                            <label class="form-label fw-semibold text-dark small mb-2">Store (Only active stores and stores with completed payment setups will be shown)</label>
                             <input type="search" class="header-search-bar mx-auto d-block" placeholder="Search store" wire:model.live.debounce.500ms="storeTerm" inputmode="search">
                             <span class="store-search-results-status" wire:loading wire:target="storeTerm"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Searching...</span>
                             <span class="store-search-results-status" wire:loading wire:target="setStore"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Setting store...</span>
@@ -766,10 +773,78 @@ new class extends Component
                             @enderror
                         </div>
 
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-semibold text-dark small mb-2">Description</label>
-                            <textarea rows="3" placeholder="Short description about the product" wire:model.live.debounce.500ms="description"></textarea>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-dark small mb-2" for="product-description-editor">Description</label>
+                            <div wire:ignore>
+                                <div x-data="setupEditor($wire.entangle('description'))" x-init="init($refs.editor)" class="product-description-editor">
+                                    <input type="hidden" x-model="content" aria-hidden="true">
+
+                                    <div class="product-description-editor__toolbar d-flex flex-wrap gap-2 border border-bottom-0 rounded-top p-2 bg-light" role="toolbar" aria-label="Description formatting">
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('bold') ? 'is-active' : ''" :aria-pressed="isActive('bold')" @click="toggleBold()" aria-label="Bold" title="Bold"><strong>B</strong></button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('italic') ? 'is-active' : ''" :aria-pressed="isActive('italic')" @click="toggleItalic()" aria-label="Italic" title="Italic"><em>I</em></button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('strike') ? 'is-active' : ''" :aria-pressed="isActive('strike')" @click="toggleStrike()" aria-label="Strikethrough" title="Strikethrough"><s>S</s></button>
+                                        <span class="vr mx-1"></span>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 1 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 1 })" @click="toggleHeading(1)" title="Heading 1">H1</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 2 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 2 })" @click="toggleHeading(2)" title="Heading 2">H2</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 3 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 3 })" @click="toggleHeading(3)" title="Heading 3">H3</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 4 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 4 })" @click="toggleHeading(4)" title="Heading 4">H4</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 5 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 5 })" @click="toggleHeading(5)" title="Heading 5">H5</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 6 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 6 })" @click="toggleHeading(6)" title="Heading 6">H6</button>
+                                        <span class="vr mx-1"></span>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('bulletList') ? 'is-active' : ''" :aria-pressed="isActive('bulletList')" @click="toggleBulletList()" title="Bulleted list">• List</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('orderedList') ? 'is-active' : ''" :aria-pressed="isActive('orderedList')" @click="toggleOrderedList()" title="Numbered list">1. List</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('blockquote') ? 'is-active' : ''" :aria-pressed="isActive('blockquote')" @click="toggleBlockquote()" title="Quote">Quote</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('codeBlock') ? 'is-active' : ''" :aria-pressed="isActive('codeBlock')" @click="toggleCodeBlock()" title="Code block">Code</button>
+                                        <span class="vr mx-1"></span>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('link') ? 'is-active' : ''" :aria-pressed="isActive('link')" @click="setLink()" title="Add or edit link">Link</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent @click="setHorizontalRule()" title="Insert divider">—</button>
+                                        <span class="ms-auto d-flex gap-2">
+                                            <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :disabled="!canUndo()" @click="undo()" title="Undo">Undo</button>
+                                            <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :disabled="!canRedo()" @click="redo()" title="Redo">Redo</button>
+                                        </span>
+                                    </div>
+
+                                    <div id="product-description-editor" x-ref="editor" class="form-control product-description-editor__content rounded-top-0" aria-label="Product description" aria-multiline="true"></div>
+                                </div>
+                            </div>
                             @error('description')
+                                <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-12">
+                            <label for="delivery-information" class="form-label fw-semibold text-dark small mb-2">Delivery Information <span class="text-muted fw-normal">(optional)</span></label>
+                            <div wire:ignore>
+                                <div x-data="setupEditor($wire.entangle('delivery_information'))" x-init="init($refs.editor)" class="product-description-editor">
+                                    <input type="hidden" x-model="content" aria-hidden="true">
+                                    <div class="product-description-editor__toolbar d-flex flex-wrap gap-2 border border-bottom-0 rounded-top p-2 bg-light" role="toolbar" aria-label="Delivery information formatting">
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('bold') ? 'is-active' : ''" :aria-pressed="isActive('bold')" @click="toggleBold()" aria-label="Bold" title="Bold"><strong>B</strong></button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('italic') ? 'is-active' : ''" :aria-pressed="isActive('italic')" @click="toggleItalic()" aria-label="Italic" title="Italic"><em>I</em></button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('strike') ? 'is-active' : ''" :aria-pressed="isActive('strike')" @click="toggleStrike()" aria-label="Strikethrough" title="Strikethrough"><s>S</s></button>
+                                        <span class="vr mx-1"></span>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 1 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 1 })" @click="toggleHeading(1)" title="Heading 1">H1</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 2 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 2 })" @click="toggleHeading(2)" title="Heading 2">H2</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 3 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 3 })" @click="toggleHeading(3)" title="Heading 3">H3</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 4 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 4 })" @click="toggleHeading(4)" title="Heading 4">H4</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 5 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 5 })" @click="toggleHeading(5)" title="Heading 5">H5</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('heading', { level: 6 }) ? 'is-active' : ''" :aria-pressed="isActive('heading', { level: 6 })" @click="toggleHeading(6)" title="Heading 6">H6</button>
+                                        <span class="vr mx-1"></span>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('bulletList') ? 'is-active' : ''" :aria-pressed="isActive('bulletList')" @click="toggleBulletList()" title="Bulleted list">• List</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('orderedList') ? 'is-active' : ''" :aria-pressed="isActive('orderedList')" @click="toggleOrderedList()" title="Numbered list">1. List</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('blockquote') ? 'is-active' : ''" :aria-pressed="isActive('blockquote')" @click="toggleBlockquote()" title="Quote">Quote</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('codeBlock') ? 'is-active' : ''" :aria-pressed="isActive('codeBlock')" @click="toggleCodeBlock()" title="Code block">Code</button>
+                                        <span class="vr mx-1"></span>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :class="updatedAt && isActive('link') ? 'is-active' : ''" :aria-pressed="isActive('link')" @click="setLink()" title="Add or edit link">Link</button>
+                                        <button type="button" class="btn btn-outline-secondary" @mousedown.prevent @click="setHorizontalRule()" title="Insert divider">—</button>
+                                        <span class="ms-auto d-flex gap-2">
+                                            <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :disabled="!canUndo()" @click="undo()" title="Undo">Undo</button>
+                                            <button type="button" class="btn btn-outline-secondary" @mousedown.prevent :disabled="!canRedo()" @click="redo()" title="Redo">Redo</button>
+                                        </span>
+                                    </div>
+                                    <div id="delivery-information" x-ref="editor" class="form-control product-description-editor__content rounded-top-0" aria-label="Delivery information" aria-multiline="true"></div>
+                                </div>
+                            </div>
+                            @error('delivery_information')
                                 <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                             @enderror
                         </div>

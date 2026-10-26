@@ -115,7 +115,8 @@ class CartService
             }
 
             $variant = $product->productVariants->firstWhere('id', (int) ($entry['variant_id'] ?? 0));
-            $price = $variant ? (float) $variant->price : (float) $product->price;
+            $requestedVariantId = (int) ($entry['variant_id'] ?? 0);
+            $price = $requestedVariantId ? ($variant ? (float) $variant->price : null) : (float) $product->price;
             $quantity = (int) ($entry['quantity'] ?? 0);
 
             if ($quantity < 1) {
@@ -125,7 +126,7 @@ class CartService
             $items->push((object) [
                 'id' => 'variant-' . $product->id . '-' . ($variant?->id ?? 0),
                 'product_id' => $product->id,
-                'variant_id' => $variant?->id,
+                'variant_id' => $requestedVariantId ?: null,
                 'quantity' => $quantity,
                 'price' => $price,
                 'product' => $product,
@@ -253,6 +254,56 @@ class CartService
         session()->forget('cart_variant_items');
     }
 
+    /** Remove only the exact product/variant lines included in a completed order. */
+    public function removeItems(iterable $items): void
+    {
+        if (! $this->canUseCart()) {
+            return;
+        }
+
+        $productIds = [];
+        $variantKeys = [];
+        foreach ($items as $item) {
+            $productId = (int) ($item->product_id ?? 0);
+            if ($productId < 1) {
+                continue;
+            }
+
+            if (filled($item->variant_id ?? null)) {
+                $variantKeys[] = $productId . ':' . (int) $item->variant_id;
+            } else {
+                $productIds[] = $productId;
+            }
+        }
+
+        if (auth()->check() && $productIds !== []) {
+            Cart::query()->whereIn('product_id', array_unique($productIds))->delete();
+        } elseif ($productIds !== []) {
+            $guestItems = $this->guestCart();
+            foreach (array_unique($productIds) as $productId) {
+                unset($guestItems[$productId]);
+            }
+            $this->putGuestCart($guestItems);
+        }
+
+        if ($variantKeys !== []) {
+            $variantItems = $this->variantCart();
+            foreach (array_unique($variantKeys) as $key) {
+                unset($variantItems[$key]);
+            }
+            if ($variantItems === []) {
+                $this->cache()->forget($this->guestVariantCartKey());
+                session()->forget('cart_variant_items');
+            } else {
+                $this->putGuestVariantCart($variantItems);
+            }
+        }
+
+        if (! auth()->check() && $this->guestCart() === [] && $this->variantCart() === []) {
+            $this->forgetGuestCart($this->guestCartToken());
+        }
+    }
+
     public function mergeGuestCart(User $user, ?string $token = null): void
     {
         if (!$user->can('customer')) {
@@ -267,14 +318,17 @@ class CartService
 
         $key = $this->guestCartKey($token);
         $guestCart = $this->normalizeCart($this->cache()->get($key, []));
+        $guestVariants = $this->normalizeVariantCart(
+            $this->cache()->get($this->guestVariantCartKey($token), session('cart_variant_items', []))
+        );
+        $existingVariantCart = $this->normalizeVariantCart(session('cart_variant_items', []));
+        $validatedVariants = $existingVariantCart;
 
-        if ($guestCart === []) {
-            $this->forgetGuestCart($token);
-            return;
-        }
-
-        DB::transaction(function () use ($user, $guestCart) {
-            $products = Product::whereIn('id', array_keys($guestCart))->get()->keyBy('id');
+        DB::transaction(function () use ($user, $guestCart, $guestVariants, &$validatedVariants): void {
+            $productIds = collect(array_keys($guestCart))
+                ->merge(collect($guestVariants)->pluck('product_id'))
+                ->unique()->sort()->values();
+            $products = Product::whereIn('id', $productIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
 
             foreach ($guestCart as $productId => $quantity) {
                 $product = $products->get($productId);
@@ -301,9 +355,45 @@ class CartService
                     'quantity' => $newQuantity,
                 ]);
             }
+
+            $variantIds = collect($guestVariants)->pluck('variant_id')->unique()->sort()->values();
+            $variants = $variantIds->isEmpty()
+                ? collect()
+                : ProductVariant::whereIn('id', $variantIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+
+            foreach ($guestVariants as $entry) {
+                $product = $products->get($entry['product_id']);
+                $variant = $variants->get($entry['variant_id']);
+
+                if (! $product || ! $variant || (int) $variant->product_id !== (int) $product->id || $variant->quantity < 1) {
+                    continue;
+                }
+
+                $key = $this->variantCartKey($product, $variant->id);
+                $entry['quantity'] = min((int) $entry['quantity'], (int) $variant->quantity);
+                $existingQuantity = (int) ($validatedVariants[$key]['quantity'] ?? 0);
+                $mergedQuantity = min($existingQuantity + (int) $entry['quantity'], (int) $variant->quantity);
+
+                $validatedVariants[$key] = [
+                    'product_id' => $product->id,
+                    'variant_id' => $variant->id,
+                    'quantity' => $mergedQuantity,
+                ];
+            }
         });
 
-        $this->forgetGuestCart($token);
+        if ($validatedVariants !== []) {
+            session()->put('cart_variant_items', $validatedVariants);
+        } else {
+            session()->forget('cart_variant_items');
+        }
+
+        $this->cache()->forget($this->guestVariantCartKey($token));
+        $this->cache()->forget($this->guestCartKey($token));
+
+        if (session('cart_token') === $token) {
+            session()->forget('cart_token');
+        }
     }
 
     protected function addVariant(Product $product, int $quantity, int $variantId): bool

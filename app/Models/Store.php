@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 
@@ -20,6 +21,11 @@ class Store extends Model
 
     public function products(){
         return $this->hasMany(Product::class);
+    }
+
+    public function storeOrders(): HasMany
+    {
+        return $this->hasMany(StoreOrder::class);
     }
 
     public function reviews(){

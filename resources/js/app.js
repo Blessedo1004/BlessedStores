@@ -1,3 +1,126 @@
+import { Editor } from '@tiptap/core'
+import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
+
+window.setupEditor = (initialContent) => {
+    let editor;
+
+    return {
+        content: initialContent,
+      updatedAt: 0,
+        editorReady: false,
+
+        init(element) {
+            this.$nextTick(() => {
+                if (editor) {
+                    editor.destroy();
+                }
+
+                this.editorReady = false;
+
+                try {
+                    editor = new Editor({
+                        element: element,
+                        extensions: [
+                            StarterKit.configure({
+                                heading: {
+                                    levels: [1, 2, 3, 4, 5, 6],
+                                },
+                            }),
+                            Link.configure({
+                                openOnClick: false,
+                                HTMLAttributes: {
+                                class: 'text-decoration-underline',
+                                },
+                            }),
+                        ],
+                        content: this.content,
+                        onUpdate: ({ editor: e }) => {
+                            this.content = e.getHTML();
+                          this.updatedAt = Date.now();
+                        },
+                        onSelectionUpdate: () => {
+                          this.updatedAt = Date.now();
+                        },
+                        onTransaction: () => {
+                            this.updatedAt = Date.now();
+                        },
+                    });
+                    this.editorReady = true;
+                } catch (error) {
+                    console.error('Tiptap: Initialization failed', error);
+                }
+            });
+
+            return () => {
+                if (editor) {
+                    editor.destroy();
+                    editor = null;
+                }
+            };
+        },
+
+        isActive(type, opts = {}) {
+          this.updatedAt;
+            return editor ? editor.isActive(type, opts) : false;
+        },
+
+        canUndo() { this.updatedAt; return editor ? editor.can().undo() : false; },
+        canRedo() { this.updatedAt; return editor ? editor.can().redo() : false; },
+
+        // Link Support
+        setLink() {
+            if (!editor) return;
+            
+            // 1. Check if there's an existing link
+            const previousUrl = editor.getAttributes('link').href;
+            
+            // 2. Get the currently selected text
+            const { from, to } = editor.state.selection;
+            const selectedText = editor.state.doc.textBetween(from, to, ' ');
+            
+            // 3. Smart suggestion: use existing link OR selected text if it looks like a URL
+            const isUrl = (str) => /^(https?:\/\/|www\.)[^\s]+$/.test(str);
+            const defaultUrl = previousUrl || (isUrl(selectedText) ? (selectedText.startsWith('www.') ? 'https://' + selectedText : selectedText) : '');
+
+            const url = window.prompt('URL', defaultUrl);
+
+            // cancelled
+            if (url === null) {
+                return;
+            }
+
+            // empty
+            if (url === '') {
+                editor.chain().focus().extendMarkRange('link').unsetLink().run();
+                return;
+            }
+
+            // update link
+            editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+        },
+
+        // Formatting
+        toggleBold() { if (editor) editor.chain().focus().toggleBold().run(); },
+        toggleItalic() { if (editor) editor.chain().focus().toggleItalic().run(); },
+        toggleStrike() { if (editor) editor.chain().focus().toggleStrike().run(); },
+        toggleCode() { if (editor) editor.chain().focus().toggleCode().run(); },
+        toggleHeading(level) { if (editor) editor.chain().focus().toggleHeading({ level }).run(); },
+        toggleBulletList() { if (editor) editor.chain().focus().toggleBulletList().run(); },
+        toggleOrderedList() { if (editor) editor.chain().focus().toggleOrderedList().run(); },
+        toggleBlockquote() { if (editor) editor.chain().focus().toggleBlockquote().run(); },
+        toggleCodeBlock() { if (editor) editor.chain().focus().toggleCodeBlock().run(); },
+        setHorizontalRule() { if (editor) editor.chain().focus().setHorizontalRule().run(); },
+        undo() { if (editor) editor.commands.undo(); },
+        redo() { if (editor) editor.commands.redo(); },
+    }
+}
+  
+  
+  
+  
+  
+  
   // panel sidebar navigation
   function sideBarNavigation (){
     const sidebar = document.getElementById('dashboardSidebar');

@@ -1,201 +1,175 @@
-# Phase 2: Store Payment Setup and Paystack Subaccount Creation
+# Stage 3: Paystack Payment Initialization — BlessedStores
 
-Implement the store payment setup feature in my existing Laravel multi-vendor ecommerce application, BlessedStores.
+Implement **Stage 3 only** of the order and payment workflow for my existing Laravel multi-vendor e-commerce application, BlessedStores.
 
-## Context
+## 1. Start by inspecting the existing implementation
 
-- The application uses Laravel and Livewire.
-- Store owners do not necessarily register as users before submitting store applications.
-- An admin reviews and approves store applications. After approval, the application process creates or associates the appropriate user account and store.
-- Stores must complete Paystack payment setup before they can add products.
-- The platform already has its own Paystack account and API credentials.
-- Each store needs its own Paystack subaccount so that the platform can distribute payments to multiple stores using Paystack's dynamic multi-split payments.
-- The `stores` table now has these payment-related columns:
-  - `paystack_subaccount_code`: nullable, unique string.
-  - `payment_setup_status`: enum with `not_started`, `pending`, `processing`, `ready`, `failed`, and `requires_review`; default `not_started`.
-  - `payment_setup_completed_at`: nullable timestamp.
-- The store's existing `status` column has been renamed to `store_status`. Do not confuse the store's operational status with its payment setup status.
+Before making any changes, inspect the existing codebase to understand:
 
-## Objective
+- The `orders`, `order_items`, payments, and related database tables and models.
+- The existing order creation flow implemented in Stage 2.
+- How orders relate to their customers, stores, products, and order items.
+- The existing Paystack integration, configuration, environment variables, routes, controllers, Livewire components, and payment-related services.
+- How store owners and their Paystack subaccounts are represented in the database.
+- The existing platform commission configuration and calculation.
+- The existing order and payment status fields.
 
-Allow an authenticated store owner to set up their settlement bank account from their store dashboard. Resolve and confirm the bank account before creating a Paystack subaccount. Save the returned subaccount code and update the store's payment setup status.
+Reuse the existing architecture, relationships, naming conventions, and code wherever possible. Do not recreate functionality already implemented.
 
-Do not implement checkout, customer payments, order management, commissions, or dynamic payment splitting in this phase.
+If a required field, relationship, or integration detail is missing, identify it before deciding on the smallest necessary change.
 
-## 1. Inspect the existing project first
+## 2. Scope of Stage 3
 
-Before making changes:
+Implement the process that initializes a Paystack payment for an existing unpaid order and directs the customer to Paystack's hosted checkout page.
 
-- Inspect the existing store model, migrations, authentication, roles, permissions, store ownership relationships, Livewire components, layouts and dashboard navigation.
-- Identify how a logged-in store owner is associated with their store.
-- Reuse the project's existing conventions and components.
-- Do not create duplicate models, tables, layouts or payment services unnecessarily.
-- Do not modify the existing store application approval workflow unless necessary for this phase.
+The order must already have been created by Stage 2. Do not create another order during payment initialization.
 
-## 2. Store dashboard payment setup UI
+Support both authenticated customers and guest customers using the existing checkout flow.
 
-Add a Payment Setup section to the existing store owner's dashboard.
+## 3. Payment initialization
 
-The interface should:
+When a customer proceeds to payment:
 
-- Display the current payment setup status.
-- Allow the store owner to select a bank and enter their account number.
-- Provide a button to resolve the account.
-- Display the resolved account holder's name after a successful lookup.
-- Require the store owner to confirm that the returned name matches their intended settlement account.
-- Provide a separate action to create the Paystack subaccount after confirmation.
-- Show appropriate loading states, validation messages, API errors and success messages.
-- Prevent repeated submissions while a request is processing.
-- Display the existing subaccount status when setup has already been completed.
-- Avoid exposing the Paystack secret key or unnecessary bank details.
+1. Retrieve the existing order using its identifier and the appropriate authorization rules.
+2. Confirm that the order belongs to the authenticated customer or is accessible through the existing secure guest-checkout flow.
+3. Confirm that the order is eligible for payment and has not already been paid.
+4. Validate the order's persisted amount against its order items and applicable charges using the existing Stage 2 logic.
+5. Confirm that every store participating in the order has an active, valid Paystack subaccount configured for payouts.
+6. Confirm that the order's stock reservation is still valid under the existing Stage 2 implementation.
+7. Generate a unique payment reference.
+8. Create or update the appropriate payment record using the existing schema and relationships.
+9. Initialize the transaction through Paystack's API.
+10. Redirect the customer to the authorization URL returned by Paystack.
 
-Follow the existing project's UI conventions and ensure the interface works on mobile and desktop.
+Use the server-side order amount as the source of truth. Never trust the amount, store allocations, commission, or payment reference submitted by the browser.
 
-## 3. Bank listing and account resolution
+Handle Paystack API errors, invalid responses, network failures, and missing authorization URLs safely. Do not mark an order as paid merely because payment initialization succeeds.
 
-Use Paystack's official API documentation:
+## 4. Multi-store payment splitting
 
-- List Banks: https://paystack.com/docs/api/bank/
-- Resolve Account Number: https://paystack.com/docs/api/verification/#resolve-account-number
+A single checkout can contain products belonging to multiple stores. Implement payment allocation that supports all participating stores dynamically.
 
-Requirements:
+For each store represented in the order:
 
-- Fetch supported banks from Paystack using a backend service.
-- Populate the bank selector with the returned bank names and codes.
-- Resolve the account using the selected bank code and account number.
-- Display the returned account holder's name.
-- Require explicit confirmation before allowing subaccount creation.
-- If the bank or account number changes, invalidate the previous resolution and confirmation.
-- Validate the account number and bank selection on the server.
-- Handle API failures, invalid account details, timeouts and rate limits gracefully.
-- Do not trust client-submitted account names or resolution results.
+- Calculate the store's product subtotal from the persisted order items.
+- Calculate the platform commission using the existing configured commission rate and Stage 2 rules.
+- Calculate the store's net allocation after deducting the applicable platform commission.
+- Associate the allocation with the correct store's Paystack subaccount.
 
-Do not hardcode bank lists or invent API response fields. Follow Paystack's current documentation.
+The platform commission is calculated separately for each store based on that store's product subtotal, not on the entire checkout subtotal.
 
-## 4. Paystack service
+Do not hardcode the number of stores, subaccount codes, commission rates, or allocation amounts.
 
-Create or extend a dedicated Paystack service following the project's existing architecture.
+### Cart item grouping by store
 
-Use the configured Paystack secret key from Laravel configuration. Never expose it to Livewire's frontend or browser JavaScript.
+Ensure that cart items are correctly grouped by their respective stores throughout the checkout and payment initialization process.
 
-Implement separate methods for:
+- Group cart items by their associated `store_id` before calculating store subtotals, platform commissions, and payment allocations.
+- Each store's subtotal must include only the items belonging to that store.
+- Use the persisted order items created in Stage 2 as the source of truth when initializing payment. Do not recalculate payment allocations directly from potentially modified browser cart data.
+- Ensure that each store's Paystack subaccount receives the correct allocation based on that store's order items and applicable platform commission.
+- Support orders containing products from one store or multiple stores dynamically.
+- Prevent items from being assigned to the wrong store, duplicated across store groups, or omitted from allocation calculations.
+- Reconcile all store subtotals and allocations against the order's persisted totals before initializing the Paystack transaction.
+- Reuse the existing cart and order relationships and grouping logic wherever possible. Do not introduce redundant database tables or relationships solely for grouping.
 
-- Fetching supported banks.
-- Resolving a bank account.
-- Creating a subaccount.
+If Stage 2 already groups items by store when creating order items, preserve that implementation and ensure Stage 3 uses it correctly. Make any necessary corrections only if the existing grouping is incomplete or incorrect.
+### Paystack API requirements
 
-Use Paystack's official Create Subaccount API:
+Inspect the current Paystack documentation and determine the correct supported approach for distributing one transaction among multiple subaccounts.
 
-https://paystack.com/docs/api/subaccount/#create
+Do not assume that a single-subaccount split configuration supports multiple vendors. If Paystack requires a split group or another supported configuration for multi-subaccount transactions, implement the appropriate approach.
 
-Pass the required business name, bank code, account number, and other required fields according to the current API documentation.
+Ensure that:
 
-Use the appropriate settlement configuration for the platform's intended dynamic multi-split payment architecture. Do not invent unsupported parameters or assume that a particular percentage or flat-split configuration is required at subaccount creation.
+- Every participating store is allocated the correct amount.
+- The platform commission is retained correctly.
+- Allocation amounts reconcile with the order's product subtotal and any existing applicable charges.
+- Amounts are represented in the units expected by Paystack.
+- Rounding is handled consistently and safely.
+- The platform's own share is not accidentally paid to a vendor.
+- The implementation does not silently proceed with an invalid or incomplete split.
 
-## 5. Create and persist the subaccount
+If the existing Paystack integration cannot support the required dynamic split configuration, explain the limitation and propose the smallest compatible solution before implementing an alternative.
 
-When the store owner confirms the resolved account name and requests subaccount creation:
+## 5. Transaction fees
 
-1. Verify that the authenticated user owns or is authorized to manage the store.
-2. Confirm that payment setup is not already completed.
-3. Validate the submitted bank details on the server.
-4. Confirm that the account resolution is still valid for the submitted bank and account number.
-5. Mark payment setup as `processing`.
-6. Call Paystack to create the subaccount.
-7. Validate the API response and extract the actual returned subaccount code.
-8. Save the subaccount code to `stores.paystack_subaccount_code`.
-9. Update the payment setup status based on the response and the verification requirements established for this integration.
-10. Set `payment_setup_completed_at` only when the store meets the application's defined readiness requirements.
+Paystack's dashboard setting to **charge transaction fees to the customer** is enabled.
 
-Handle timeouts carefully. If the request times out after Paystack may have created the subaccount, do not blindly create another one. Record the issue, check for an existing subaccount where possible, and allow safe recovery.
+Therefore:
 
-Use appropriate database transactions for local persistence. Do not keep a database transaction open while waiting for Paystack's network request.
+- Initialize the transaction using the order's actual payable base amount.
+- Do not manually add an estimated Paystack processing fee to the amount sent to Paystack.
+- Do not add the fee a second time in the backend.
+- Do not treat the processing fee as VAT.
+- Do not include the Paystack processing fee in the platform commission calculation unless the existing business rules explicitly require it.
 
-## 6. Status handling
+Paystack should calculate and add its transaction fee according to the enabled dashboard setting. Do not assume that the fee can be calculated exactly from a simple percentage in the application.
 
-Use the existing `payment_setup_status` values consistently:
+## 6. Payment references and duplicate initialization
 
-- `not_started`: no setup attempt has been made.
-- `pending`: setup has been requested but has not yet been processed.
-- `processing`: a setup request is currently being processed.
-- `ready`: the subaccount satisfies the application's confirmed requirements for payment setup.
-- `failed`: setup failed and can be retried after addressing the problem.
-- `requires_review`: the outcome is ambiguous or requires administrative intervention.
+Use unique transaction references and associate each reference with the correct order and payment record.
 
-Do not assume that a successful subaccount creation automatically means the account is verified or eligible for every settlement operation.
+Prevent concurrent or repeated initialization requests from creating conflicting active payment attempts or accidentally paying the same order twice.
 
-Paystack may return `active` and `is_verified` fields. Handle these according to the current documentation and the platform's confirmed requirements. Do not automatically mark an unverified subaccount as unusable without establishing that this is required.
+Reuse the existing payment schema where possible. If multiple payment attempts are supported by the current design, preserve their history and ensure that only a verified successful payment can complete the order.
 
-If manual verification in the Paystack Dashboard is necessary, preserve the returned subaccount code and provide an appropriate status and recovery path rather than creating duplicate subaccounts.
+If the database schema needs a change, explain why and make only the necessary migration. Do not introduce redundant columns or duplicate existing relationships.
 
-## 7. Security and authorization
+## 7. Order and payment statuses
 
-- Only an authenticated user authorized to manage a store may modify that store's payment setup.
-- Never accept a store ID from the client without checking ownership or permissions.
-- Never trust client-submitted account names or confirmation flags without validating the server-side state.
-- Prevent duplicate or concurrent subaccount creation attempts.
-- Do not log secret keys, full bank account numbers or sensitive API payloads.
-- Validate all inputs server-side.
-- Use Laravel's configured HTTP client, timeouts and error handling.
-- Follow existing authorization and validation conventions.
+Preserve the agreed status design:
 
-## 8. Product creation restriction
+- An order begins with the `unpaid` status.
+- The `paid_at` column remains `null` until payment is confirmed through the subsequent verification/webhook stage.
+- The fulfillment statuses `pending`, `processed`, and `delivered` are for paid orders only.
+- Successful payment initialization does not change the order to paid.
+- Do not introduce an unnecessary `packaged_at` column or status.
 
-Inspect the existing product creation authorization and Livewire actions.
+Use existing payment statuses and fields wherever possible. Do not implement payment verification, webhook processing, stock finalization, or fulfillment management in this stage.
 
-Ensure that a store cannot add products until `payment_setup_status` is `ready`.
+## 8. Security and failure handling
 
-Enforce this server-side in the relevant product creation actions and endpoints, not only by hiding the Add Product button.
+- Keep Paystack secret keys on the server.
+- Never expose secret keys or sensitive payment configuration to the browser.
+- Use the existing authentication, authorization, and guest-order security mechanisms.
+- Validate all incoming identifiers.
+- Prevent users from initializing payments for other customers' orders.
+- Use database transactions where appropriate for local database changes.
+- Handle unsuccessful initialization without falsely marking the order as paid.
+- Ensure retries do not corrupt payment records or order data.
+- Do not log secret keys or sensitive payment information.
 
-Do not unnecessarily restrict existing store profile management or unrelated dashboard functionality.
+## 9. Explicit exclusions
 
-Do not refactor the entire product system. Make only the changes necessary to enforce this requirement.
+Do not implement any of the following in Stage 3:
 
-## 9. Configuration and environment
+- Order creation or checkout redesign.
+- Product quantity deduction or stock reservation redesign.
+- Paystack webhook processing.
+- Payment verification and final payment confirmation.
+- Refunds or chargebacks.
+- Store or administrator order-management interfaces.
+- Customer order-history or guest-order-tracking interfaces.
+- Delivery charges or shipping calculations.
+- New payment gateways.
+- Automated creation of test orders, customers, products, stores, or transactions.
 
-Reuse the project's existing Paystack configuration if available. Otherwise, add a suitable configuration entry that reads the secret key from `.env`.
+These are outside the scope of this stage.
 
-For example, use a configuration key such as `services.paystack.secret_key`, but follow the existing project conventions if they differ.
+## 10. Manual testing and final report
 
-Do not hardcode credentials. Do not modify production credentials or switch the application to live mode as part of this implementation.
+I will perform the testing myself. Do not automatically seed or create test records, initiate real payments, or make live financial transactions.
 
-## 10. Testing
+After implementation, provide a concise report containing:
 
-Add appropriate tests following the project's existing testing framework.
+1. The files created or modified.
+2. The payment initialization flow.
+3. How dynamic multi-store allocation and platform commission work.
+4. How Paystack transaction fees are handled.
+5. Any migrations or environment/configuration changes required.
+6. Any manual dashboard configuration required for subaccounts or split payments.
+7. The exact manual testing steps I should perform.
+8. Any limitations or unresolved dependencies.
 
-Cover:
-
-- Fetching the bank list.
-- Successful account resolution.
-- Invalid bank or account details.
-- Account name confirmation.
-- Invalidating confirmation when account details change.
-- Successful subaccount creation.
-- Paystack API failures and timeouts.
-- Preventing duplicate subaccount creation.
-- Store ownership and authorization.
-- Saving the correct subaccount code and statuses.
-- Preventing product creation when payment setup is not ready.
-- Allowing product creation when payment setup is ready.
-
-Mock Paystack HTTP requests in automated tests. Do not make real API calls from the test suite.
-
-## Constraints
-
-- Inspect the codebase before editing.
-- Preserve existing application architecture and conventions.
-- Avoid unnecessary migrations, dependencies, refactors and duplicated logic.
-- Do not implement customer checkout, payments, commissions, order tables, or multi-split payment processing in this phase.
-- Do not change the existing store approval and user account creation process unless absolutely necessary.
-- Run relevant tests and report any failures.
-
-## Expected deliverable
-
-Implement the complete store payment setup feature, including any necessary migrations, backend service methods, Livewire UI, validation, authorization, status handling, product creation restrictions and automated tests.
-
-At the end, summarize:
-1. Files created or modified.
-2. Any migrations required.
-3. Environment configuration required.
-4. How to test the feature locally.
-5. Any Paystack Dashboard verification steps that still require manual action.
+Implement only Stage 3, preserve the completed Stage 1 and Stage 2 work, and do not proceed to Stage 4 without my instruction.
