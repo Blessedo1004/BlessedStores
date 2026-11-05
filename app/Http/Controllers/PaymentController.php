@@ -2,92 +2,84 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Services\PaystackService;
+use App\Services\PaymentConfirmationService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class PaymentController extends Controller
 {
-    protected $paystack;
-
-    public function __construct(PaystackService $paystack)
-    {
-        $this->paystack = $paystack;
-    }
-
-    public function showForm()
-    {
-        return view('payment.form');
-    }
-
-    public function initialize(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|email',
-            'phone' => 'required|string',
-            'amount' => 'required|numeric|min:100',
-        ]);
-
-        $data = [
-            'email' => $request->email,
-            'amount' => $request->amount * 100,
-            'metadata' => [
-                'name' => $request->name,
-                'phone' => $request->phone
-            ],
-            'callback_url' => route('payment.callback'),
-        ];
-
-        $response = $this->paystack->initializeTransaction($data);
-        return redirect($response['data']['authorization_url']);
+    public function __construct(
+        private readonly PaystackService $paystack,
+        private readonly PaymentConfirmationService $confirmation,
+    ) {
     }
 
     public function callback(Request $request)
     {
-        // TEMPORARY TESTING BLOCK - REMOVE LATER
-        if (app()->environment('local') && !$request->has('reference')) {
-            $mockResponse = [
-                'status' => true,
-                'data' => [
-                    'status' => 'success',
-                    'reference' => 'TEST_'.rand(1000,9999),
-                    'amount' => 10000,
-                    'metadata' => $request->session()->get('payment_details', [
-                        'name' => 'Test User',
-                        'phone' => '07037848567'
-                    ]),
-                    'customer' => [
-                        'email' => $request->session()->get('payment_details.email', 'test@example.com')
-                    ]
-                ]
-            ];
-            
-            $paymentDetails = $mockResponse['data'];
-            return view('payment.success', [
-                'name' => $paymentDetails['metadata']['name'],
-                'email' => $paymentDetails['customer']['email'],
-                'phone' => $paymentDetails['metadata']['phone'],
-                'amount' => $paymentDetails['amount'] / 100,
-                'reference' => $paymentDetails['reference']
-            ]);
-        }
-        // END TEMPORARY BLOCK
-
         $reference = $request->query('reference');
-        $response = $this->paystack->verifyTransaction($reference);
-
-        if ($response['status'] && $response['data']['status'] === 'success') {
-            $paymentDetails = $response['data'];
-            
-            return view('payment.success', [
-                'name' => $paymentDetails['metadata']['name'],
-                'email' => $paymentDetails['customer']['email'],
-                'phone' => $paymentDetails['metadata']['phone'],
-                'amount' => $paymentDetails['amount'] / 100,
-                'reference' => $paymentDetails['reference']
-            ]);
+        if (! is_string($reference) || $reference === '' || strlen($reference) > 100) {
+            return redirect()->route('checkout')->with('error', 'We could not confirm this payment. Please contact support if you were charged.');
         }
 
-        return redirect()->route('payment.form')->with('error', 'Payment failed or was cancelled');
+        try {
+            $result = $this->confirmation->verify($reference);
+        } catch (Throwable $exception) {
+            Log::error('Payment callback could not complete verification.', ['exception' => $exception::class]);
+            return redirect()->route('checkout')->with('error', 'Payment confirmation is temporarily unavailable. If you were charged, please wait or contact support.');
+        }
+
+        if (in_array($result, ['confirmed', 'duplicate'], true)) {
+            return redirect()->route('payment.successful', ['reference' => $reference]);
+        }
+        if ($result === 'reconciliation') {
+            return redirect()->route('payment.successful', ['reference' => $reference]);
+        }
+        if ($result === 'unknown') {
+            return redirect()->route('checkout')->with('error', 'We could not match this payment reference to an order. If you were charged, please contact support.');
+        }
+
+        return redirect()->route('checkout')->with('error', 'Payment is not confirmed. If you were charged, please contact support.');
+    }
+
+    public function webhook(Request $request)
+    {
+        $rawBody = $request->getContent();
+        $signature = $request->header('Paystack-Signature');
+        $legacySignature = $request->header('x-paystack-signature');
+
+        if (! $this->paystack->isValidWebhookSignature($rawBody, $signature, $legacySignature)) {
+            Log::warning('Rejected Paystack webhook with invalid signature.');
+            return response()->json(['message' => 'Invalid signature.'], 401);
+        }
+
+        $event = json_decode($rawBody, true);
+        if (! is_array($event)) {
+            return response()->json(['message' => 'Invalid payload.'], 400);
+        }
+        if (($event['event'] ?? null) !== 'charge.success') {
+            return response()->json(['message' => 'Event ignored.'], 200);
+        }
+
+        $data = $event['data'] ?? null;
+        $reference = is_array($data) ? ($data['reference'] ?? null) : null;
+        if (! is_string($reference) || $reference === '' || strlen($reference) > 100) {
+            Log::warning('Paystack successful event had no usable reference.');
+            return response()->json(['message' => 'Invalid event data.'], 400);
+        }
+
+        try {
+            $result = $this->confirmation->confirmSignedWebhook($reference, $data);
+        } catch (Throwable $exception) {
+            Log::error('Paystack webhook processing failed and may be retried.', ['reference' => $reference, 'exception' => $exception::class]);
+            return response()->json(['message' => 'Temporary processing failure.'], 500);
+        }
+
+        if ($result === 'mismatch') {
+            return response()->json(['message' => 'Transaction details mismatch.'], 400);
+        }
+
+        return response()->json(['message' => $result], 200);
     }
 }

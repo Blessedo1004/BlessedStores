@@ -1,175 +1,231 @@
-# Stage 3: Paystack Payment Initialization — BlessedStores
+# Stage 4: Paystack Payment Verification, Webhooks, and Stock Finalization — BlessedStores
 
-Implement **Stage 3 only** of the order and payment workflow for my existing Laravel multi-vendor e-commerce application, BlessedStores.
+Implement **Stage 4 only** of my existing Laravel multi-vendor e-commerce application, BlessedStores.
 
-## 1. Start by inspecting the existing implementation
+Stages 1–3 have already been implemented. Stage 1 established the database foundation, Stage 2 implemented order creation and stock reservations, and Stage 3 implemented Paystack payment initialization and multi-store payment allocation.
 
-Before making any changes, inspect the existing codebase to understand:
+Your task is to implement reliable payment verification, webhook processing, order payment confirmation, and stock finalization without rebuilding existing functionality.
 
-- The `orders`, `order_items`, payments, and related database tables and models.
-- The existing order creation flow implemented in Stage 2.
-- How orders relate to their customers, stores, products, and order items.
-- The existing Paystack integration, configuration, environment variables, routes, controllers, Livewire components, and payment-related services.
-- How store owners and their Paystack subaccounts are represented in the database.
-- The existing platform commission configuration and calculation.
+## 1. Inspect the existing implementation first
+
+Before modifying anything, inspect the existing codebase, including:
+
+- The `orders`, `order_items`, payments, products, product variants, and related database tables and models.
+- The order creation and stock reservation logic from Stage 2.
+- The Paystack payment initialization and transaction reference handling from Stage 3.
 - The existing order and payment status fields.
+- How cart items are grouped by store and how store-specific allocations and platform commissions are calculated.
+- Existing Paystack services, controllers, routes, configuration, environment variables, and logging.
+- How product quantities and variant quantities are represented and updated.
+- Existing database transactions, authorization rules, and guest checkout handling.
 
-Reuse the existing architecture, relationships, naming conventions, and code wherever possible. Do not recreate functionality already implemented.
+Reuse existing models, relationships, services, naming conventions, and business rules. Do not recreate tables, duplicate payment logic, or replace working Stage 1–3 functionality unnecessarily.
 
-If a required field, relationship, or integration detail is missing, identify it before deciding on the smallest necessary change.
+If an essential field or relationship is missing, identify the gap and make only the smallest necessary change.
 
-## 2. Scope of Stage 3
+## 2. Server-side payment verification
 
-Implement the process that initializes a Paystack payment for an existing unpaid order and directs the customer to Paystack's hosted checkout page.
+Implement secure server-side verification of Paystack transactions.
 
-The order must already have been created by Stage 2. Do not create another order during payment initialization.
+When a customer returns from Paystack after checkout:
 
-Support both authenticated customers and guest customers using the existing checkout flow.
+1. Identify the corresponding payment attempt and order using the existing transaction reference.
+2. Verify the transaction directly with Paystack's transaction verification API using the secret key on the server.
+3. Confirm that the reference returned by Paystack matches the expected payment reference.
+4. Confirm that the transaction belongs to the correct order and payment attempt.
+5. Validate the transaction status, currency, and amount against the expected values stored for that payment attempt.
+6. Confirm that the transaction has not already been processed.
+7. If verification succeeds, invoke the appropriate payment confirmation and stock finalization logic.
+8. If payment is pending, failed, cancelled, or otherwise unconfirmed, do not mark the order as paid.
 
-## 3. Payment initialization
+Do not trust query parameters, browser-submitted amounts, success messages, or redirects as proof of payment.
 
-When a customer proceeds to payment:
+The return route must never independently mark an order as paid without successful server-side verification.
 
-1. Retrieve the existing order using its identifier and the appropriate authorization rules.
-2. Confirm that the order belongs to the authenticated customer or is accessible through the existing secure guest-checkout flow.
-3. Confirm that the order is eligible for payment and has not already been paid.
-4. Validate the order's persisted amount against its order items and applicable charges using the existing Stage 2 logic.
-5. Confirm that every store participating in the order has an active, valid Paystack subaccount configured for payouts.
-6. Confirm that the order's stock reservation is still valid under the existing Stage 2 implementation.
-7. Generate a unique payment reference.
-8. Create or update the appropriate payment record using the existing schema and relationships.
-9. Initialize the transaction through Paystack's API.
-10. Redirect the customer to the authorization URL returned by Paystack.
+Handle API errors, timeouts, invalid responses, unknown references, and mismatched transaction details safely.
 
-Use the server-side order amount as the source of truth. Never trust the amount, store allocations, commission, or payment reference submitted by the browser.
+## 3. Paystack webhook endpoint
 
-Handle Paystack API errors, invalid responses, network failures, and missing authorization URLs safely. Do not mark an order as paid merely because payment initialization succeeds.
+Implement a dedicated webhook endpoint for Paystack payment events.
 
-## 4. Multi-store payment splitting
+Requirements:
 
-A single checkout can contain products belonging to multiple stores. Implement payment allocation that supports all participating stores dynamically.
+- Use the appropriate HTTP method and route configuration.
+- Validate the Paystack webhook signature using the configured secret key and the exact raw request body, following Paystack's documented signature-verification procedure.
+- Use a timing-safe comparison when comparing signatures.
+- Reject invalid signatures without modifying orders, payments, or inventory.
+- Process the relevant successful-payment event, particularly `charge.success`.
+- Extract the transaction reference and retrieve the corresponding local payment attempt.
+- Verify the event against the expected payment reference, order, amount, and currency.
+- Use the existing payment verification service where appropriate to avoid duplicating business logic.
+- Respond with appropriate HTTP status codes so Paystack can retry when processing has genuinely failed.
+- Ensure that unknown, irrelevant, or already-processed events are handled safely.
 
-For each store represented in the order:
+Do not assume that receiving a webhook automatically proves that the payment belongs to the correct order.
 
-- Calculate the store's product subtotal from the persisted order items.
-- Calculate the platform commission using the existing configured commission rate and Stage 2 rules.
-- Calculate the store's net allocation after deducting the applicable platform commission.
-- Associate the allocation with the correct store's Paystack subaccount.
+Inspect Laravel's existing CSRF and route middleware configuration and exclude the webhook from CSRF verification using the appropriate approach for the installed Laravel version, without weakening CSRF protection for other routes.
 
-The platform commission is calculated separately for each store based on that store's product subtotal, not on the entire checkout subtotal.
+Do not implement a webhook by trusting an unsigned request or by placing the Paystack secret key in frontend code.
 
-Do not hardcode the number of stores, subaccount codes, commission rates, or allocation amounts.
+## 4. Idempotency and duplicate processing
 
-### Cart item grouping by store
+Paystack may send the same webhook more than once. Customers may also revisit the return URL, and multiple requests may attempt to verify the same payment concurrently.
 
-Ensure that cart items are correctly grouped by their respective stores throughout the checkout and payment initialization process.
+Make payment confirmation idempotent.
 
-- Group cart items by their associated `store_id` before calculating store subtotals, platform commissions, and payment allocations.
-- Each store's subtotal must include only the items belonging to that store.
-- Use the persisted order items created in Stage 2 as the source of truth when initializing payment. Do not recalculate payment allocations directly from potentially modified browser cart data.
-- Ensure that each store's Paystack subaccount receives the correct allocation based on that store's order items and applicable platform commission.
-- Support orders containing products from one store or multiple stores dynamically.
-- Prevent items from being assigned to the wrong store, duplicated across store groups, or omitted from allocation calculations.
-- Reconcile all store subtotals and allocations against the order's persisted totals before initializing the Paystack transaction.
-- Reuse the existing cart and order relationships and grouping logic wherever possible. Do not introduce redundant database tables or relationships solely for grouping.
+- A payment must not be recorded as successful more than once.
+- An order must not be transitioned to paid more than once.
+- Stock must not be deducted more than once for the same order.
+- Repeated successful webhooks must not duplicate payment records or financial entries.
+- Concurrent verification and webhook requests must not process the same payment simultaneously in a way that corrupts state.
+- Use appropriate database transactions, row locking, unique constraints, and existing processed-state fields where necessary.
 
-If Stage 2 already groups items by store when creating order items, preserve that implementation and ensure Stage 3 uses it correctly. Make any necessary corrections only if the existing grouping is incomplete or incorrect.
-### Paystack API requirements
+Keep the implementation safe if a database operation fails halfway through processing. Payment confirmation and local stock finalization should be atomic wherever practical.
 
-Inspect the current Paystack documentation and determine the correct supported approach for distributing one transaction among multiple subaccounts.
+Do not rely only on checking a status before updating it; account for concurrent requests.
 
-Do not assume that a single-subaccount split configuration supports multiple vendors. If Paystack requires a split group or another supported configuration for multi-subaccount transactions, implement the appropriate approach.
+## 5. Successful payment and order status transitions
 
-Ensure that:
+Preserve the agreed status design.
 
-- Every participating store is allocated the correct amount.
-- The platform commission is retained correctly.
-- Allocation amounts reconcile with the order's product subtotal and any existing applicable charges.
-- Amounts are represented in the units expected by Paystack.
-- Rounding is handled consistently and safely.
-- The platform's own share is not accidentally paid to a vendor.
-- The implementation does not silently proceed with an invalid or incomplete split.
+- Newly created orders begin with the `unpaid` status.
+- The existing `paid_at` column remains `null` until successful payment is confirmed.
+- After a verified successful payment, set `paid_at` and transition the order from `unpaid` to `pending`.
+- The fulfillment statuses `pending`, `processed`, and `delivered` apply to paid orders.
+- A failed, abandoned, or unconfirmed payment must not cause an order to become paid.
+- Do not introduce a redundant `packaged_at` column or status.
+- Reuse existing payment statuses and fields.
 
-If the existing Paystack integration cannot support the required dynamic split configuration, explain the limitation and propose the smallest compatible solution before implementing an alternative.
+Ensure that the order's payment status and fulfillment status are updated consistently with the existing database design. Do not introduce a second, conflicting source of truth for whether an order has been paid.
 
-## 5. Transaction fees
+If the existing schema represents payment and fulfillment statuses separately, preserve that separation.
 
-Paystack's dashboard setting to **charge transaction fees to the customer** is enabled.
+## 6. Stock reservation finalization
 
-Therefore:
+Stage 2 introduced a 30-minute stock reservation. Inspect that implementation and integrate with it instead of creating a separate inventory system.
 
-- Initialize the transaction using the order's actual payable base amount.
-- Do not manually add an estimated Paystack processing fee to the amount sent to Paystack.
-- Do not add the fee a second time in the backend.
-- Do not treat the processing fee as VAT.
-- Do not include the Paystack processing fee in the platform commission calculation unless the existing business rules explicitly require it.
+When payment is confirmed:
 
-Paystack should calculate and add its transaction fee according to the enabled dashboard setting. Do not assume that the fee can be calculated exactly from a simple percentage in the application.
+1. Identify every order item and its corresponding product or product variant.
+2. Use the persisted order items as the source of truth.
+3. Confirm that the reservation is still valid and belongs to the order.
+4. Finalize the reservation using the existing reservation mechanism.
+5. Deduct the reserved quantity from the correct product or variant inventory exactly once.
+6. Mark the reservation as finalized or consumed using the existing schema and logic, if supported.
+7. Ensure the same reserved quantity cannot be finalized by another request.
 
-## 6. Payment references and duplicate initialization
+For multi-store orders, correctly finalize inventory for every participating store. Do not skip items belonging to a different store.
 
-Use unique transaction references and associate each reference with the correct order and payment record.
+Do not deduct stock during payment initialization. Stock must be deducted only after successful payment confirmation.
 
-Prevent concurrent or repeated initialization requests from creating conflicting active payment attempts or accidentally paying the same order twice.
+If the current reservation implementation does not have a reliable way to distinguish reserved, released, and consumed stock, identify the problem and make the smallest necessary change.
 
-Reuse the existing payment schema where possible. If multiple payment attempts are supported by the current design, preserve their history and ensure that only a verified successful payment can complete the order.
+### Expired reservations and late payments
 
-If the database schema needs a change, explain why and make only the necessary migration. Do not introduce redundant columns or duplicate existing relationships.
+A reservation may expire while a customer is completing payment, or a payment may be confirmed after the reservation has expired.
 
-## 7. Order and payment statuses
+- Do not blindly deduct stock that is no longer available.
+- Recheck inventory and reservation state using appropriate locking.
+- If the original reservation is still valid, finalize it normally.
+- If it has expired and sufficient stock remains available, follow a safe, consistent recovery policy that prevents overselling.
+- If stock is unavailable, record the successful payment but flag the order for administrative reconciliation or refund handling, using the existing status structure where possible.
+- Do not silently mark an order as fully fulfilled or pretend that inventory was successfully reserved.
+- Do not implement an entire refund workflow in this stage.
 
-Preserve the agreed status design:
+Ensure that a late successful payment cannot be lost simply because the reservation expired.
 
-- An order begins with the `unpaid` status.
-- The `paid_at` column remains `null` until payment is confirmed through the subsequent verification/webhook stage.
-- The fulfillment statuses `pending`, `processed`, and `delivered` are for paid orders only.
-- Successful payment initialization does not change the order to paid.
-- Do not introduce an unnecessary `packaged_at` column or status.
+## 7. Failed and expired payments
 
-Use existing payment statuses and fields wherever possible. Do not implement payment verification, webhook processing, stock finalization, or fulfillment management in this stage.
+Handle unsuccessful payment attempts without corrupting order or inventory state.
 
-## 8. Security and failure handling
+- A failed or abandoned payment must not be treated as successful.
+- Do not release a stock reservation merely because the customer returns to the site without completing payment.
+- Release expired reservations through the existing expiration mechanism.
+- Ensure that a failed payment attempt does not automatically invalidate a different payment attempt that may still be valid for the same order.
+- Do not allow an unpaid order to remain eligible for payment indefinitely if its reservation has expired, unless the existing business rules explicitly allow a safe new reservation.
+- Preserve payment attempt history if the existing schema supports multiple attempts.
 
-- Keep Paystack secret keys on the server.
-- Never expose secret keys or sensitive payment configuration to the browser.
-- Use the existing authentication, authorization, and guest-order security mechanisms.
-- Validate all incoming identifiers.
-- Prevent users from initializing payments for other customers' orders.
-- Use database transactions where appropriate for local database changes.
-- Handle unsuccessful initialization without falsely marking the order as paid.
-- Ensure retries do not corrupt payment records or order data.
-- Do not log secret keys or sensitive payment information.
+If scheduled reservation cleanup is already implemented, reuse it. If it is not implemented and is necessary for the existing 30-minute reservation design, identify the smallest appropriate Laravel scheduled task or cleanup mechanism. Do not introduce unnecessary infrastructure.
 
-## 9. Explicit exclusions
+## 8. Multi-store orders and payment allocation
 
-Do not implement any of the following in Stage 3:
+Preserve the dynamic multi-store payment allocations implemented in Stage 3.
 
-- Order creation or checkout redesign.
-- Product quantity deduction or stock reservation redesign.
-- Paystack webhook processing.
-- Payment verification and final payment confirmation.
-- Refunds or chargebacks.
-- Store or administrator order-management interfaces.
-- Customer order-history or guest-order-tracking interfaces.
-- Delivery charges or shipping calculations.
+- Verify the actual Paystack transaction against the payment attempt that was initialized.
+- Do not recalculate, modify, or duplicate vendor allocations during webhook processing.
+- Do not create new subaccounts or split configurations in Stage 4.
+- Do not assume that a successful transaction means every local store allocation has been recorded correctly unless the applicable Paystack response and existing integration establish that.
+- Preserve the platform commission and store allocation records according to the existing architecture.
+
+A single successful payment must confirm the corresponding checkout order, not create separate duplicate orders for individual stores.
+
+If the existing Stage 3 implementation uses a Paystack split group or another supported allocation mechanism, retain that approach.
+
+## 9. Transaction fees and amount verification
+
+The Paystack dashboard setting to charge transaction fees to customers is enabled.
+
+- Verify the transaction against the expected base amount stored for the payment attempt.
+- Follow Paystack's documented transaction response semantics to determine which amount represents the transaction amount and how the customer-paid fee is represented.
+- Do not assume the fee-adjusted customer charge must equal the base order amount.
+- Do not reject valid transactions simply because Paystack charged the customer its processing fee on top of the base amount.
+- Do not add the Paystack fee a second time.
+- Do not include the customer-paid processing fee in the platform commission calculation unless the existing business rules explicitly require it.
+- Validate currency and transaction status as well as the amount.
+
+Use the expected amount from the server-side payment record, not from the browser or webhook payload alone.
+
+## 10. Logging and failure recovery
+
+Add appropriate logging for:
+
+- Invalid webhook signatures.
+- Unknown payment references.
+- Amount, currency, or reference mismatches.
+- Paystack API failures and verification errors.
+- Duplicate events and already-processed payments.
+- Stock finalization failures.
+- Successful payment confirmation.
+- Late successful payments requiring administrative reconciliation.
+
+Do not log secret keys or unnecessarily expose customers' personal information.
+
+If payment confirmation succeeds with Paystack but local processing fails, preserve enough information for safe retry and reconciliation. Return a response that allows Paystack to retry transient webhook-processing failures rather than acknowledging an event that was not successfully handled.
+
+Avoid marking an event permanently processed before the corresponding business operations have completed successfully.
+
+## 11. Explicit exclusions
+
+Do not implement the following in Stage 4:
+
+- A new checkout or order creation flow.
+- Changes to the completed Stage 3 payment initialization unless a specific defect prevents Stage 4 from working.
 - New payment gateways.
-- Automated creation of test orders, customers, products, stores, or transactions.
+- Refund processing or automated refund initiation.
+- Store or administrator order-management interfaces.
+- Customer order-history or guest order-tracking interfaces.
+- Delivery, shipping, or tax calculations.
+- Changes to platform commission rates or multi-store allocation rules.
+- Automated creation of test customers, products, stores, orders, or transactions.
+- Real payments or live financial transactions.
 
-These are outside the scope of this stage.
+These tasks are outside the scope of this stage.
 
-## 10. Manual testing and final report
+## 12. Manual testing and final report
 
 I will perform the testing myself. Do not automatically seed or create test records, initiate real payments, or make live financial transactions.
 
-After implementation, provide a concise report containing:
+After implementation, provide a concise report covering:
 
-1. The files created or modified.
-2. The payment initialization flow.
-3. How dynamic multi-store allocation and platform commission work.
-4. How Paystack transaction fees are handled.
-5. Any migrations or environment/configuration changes required.
-6. Any manual dashboard configuration required for subaccounts or split payments.
-7. The exact manual testing steps I should perform.
-8. Any limitations or unresolved dependencies.
+1. Files created and modified.
+2. How server-side payment verification works.
+3. How the Paystack webhook signature is validated.
+4. How duplicate events and concurrent requests are handled.
+5. How order status and `paid_at` are updated.
+6. How stock reservations are finalized and expired reservations are handled.
+7. Any migrations, environment variables, or Paystack dashboard changes required.
+8. How to configure the webhook URL in Paystack's dashboard.
+9. The exact manual test scenarios I should perform.
+10. Any unresolved dependencies, assumptions, or limitations.
 
-Implement only Stage 3, preserve the completed Stage 1 and Stage 2 work, and do not proceed to Stage 4 without my instruction.
+Implement Stage 4 only. Preserve the completed Stages 1–3, do not proceed to Stage 5, and do not claim that payment verification or webhook processing is complete unless the corresponding implementation actually exists.

@@ -49,3 +49,5 @@ Route::group(['middleware' => ['auth', 'cache.headers:no_store,private', 'auth.s
 // Route::get('/payment', [PaymentController::class, 'showForm'])->name('payment.form');
 // Route::post('/pay', [PaymentController::class, 'initialize'])->name('payment.initialize');
 Route::get('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
+Route::livewire('/payment/successful', '.⚡payment-successful')->name('payment.successful');
+Route::post('/payment/paystack/webhook', [PaymentController::class, 'webhook'])->name('payment.webhook');

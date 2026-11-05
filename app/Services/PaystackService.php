@@ -70,6 +70,34 @@ class PaystackService
         return $this->request('POST', '/subaccount', $payload);
     }
 
+    public function createSplitGroup(array $data): array
+    {
+        $subaccounts = collect($data['subaccounts'] ?? [])
+            ->filter(fn ($allocation) => is_array($allocation)
+                && is_string($allocation['subaccount'] ?? null)
+                && preg_match('/^ACCT_[A-Za-z0-9]+$/', $allocation['subaccount']) === 1
+                && is_int($allocation['share'] ?? null)
+                && $allocation['share'] > 0)
+            ->map(fn ($allocation) => [
+                'subaccount' => $allocation['subaccount'],
+                'share' => $allocation['share'],
+            ])
+            ->values()
+            ->all();
+
+        if ($subaccounts === []) {
+            throw new RuntimeException('At least one valid subaccount allocation is required.');
+        }
+
+        return $this->request('POST', '/split', [
+            'name' => $data['name'],
+            'type' => 'flat',
+            'currency' => $data['currency'] ?? 'NGN',
+            'subaccounts' => $subaccounts,
+            'bearer_type' => 'account',
+        ]);
+    }
+
     public function fetchSubaccount(string $subaccountCode): array
     {
         if (! preg_match('/^ACCT_[A-Za-z0-9]+$/', $subaccountCode)) {
@@ -94,6 +122,47 @@ class PaystackService
     public function verifyTransaction(string $reference): array
     {
         return $this->request('GET', '/transaction/verify/' . rawurlencode($reference));
+    }
+
+    public function isValidWebhookSignature(string $rawBody, ?string $signature, ?string $legacySignature = null): bool
+    {
+        $webhookSecret = config('services.paystack.webhook_secret');
+        if (is_string($webhookSecret) && $webhookSecret !== '' && is_string($signature) && $signature !== '') {
+            $timestamp = null;
+            $signatures = [];
+            foreach (explode(',', $signature) as $part) {
+                [$key, $value] = array_pad(explode('=', trim($part), 2), 2, null);
+                if ($key === 't' && is_string($value)) {
+                    $timestamp = $value;
+                } elseif ($key === 'v1' && is_string($value)) {
+                    [, $digest] = array_pad(explode(':', $value, 2), 2, null);
+                    if (is_string($digest) && preg_match('/^[a-f0-9]{128}$/i', $digest)) {
+                        $signatures[] = strtolower($digest);
+                    }
+                }
+            }
+
+            if (is_string($timestamp) && ctype_digit($timestamp)
+                && abs(time() - (int) $timestamp) <= 300 && $signatures !== []) {
+                $expected = hash_hmac('sha512', $timestamp . '.' . $rawBody, $webhookSecret);
+                foreach ($signatures as $candidate) {
+                    if (hash_equals($expected, $candidate)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        $secretKey = config('services.paystack.secret_key');
+        if (! is_string($secretKey) || $secretKey === '' || ! is_string($legacySignature) || $legacySignature === '') {
+            return false;
+        }
+
+        if (preg_match('/^[a-f0-9]{128}$/i', $legacySignature) !== 1) {
+            return false;
+        }
+
+        return hash_equals(hash_hmac('sha512', $rawBody, $secretKey), strtolower($legacySignature));
     }
 
     private function request(string $method, string $path, array $data = []): array

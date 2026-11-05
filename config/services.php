@@ -16,6 +16,8 @@ return [
      /*Set up payment */
     'paystack' => [
     'secret_key' => env('PAYSTACK_SECRET_KEY'),
+    // Optional newer Paystack webhook signing secret (whsec_...).
+    'webhook_secret' => env('PAYSTACK_WEBHOOK_SECRET'),
     'public_key' => env('PAYSTACK_PUBLIC_KEY'),
     'payment_url' => 'https://api.paystack.co',
     'subaccount_percentage_charge' => env('PAYSTACK_SUBACCOUNT_PERCENTAGE_CHARGE', 3),

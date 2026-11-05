@@ -2,6 +2,8 @@
 
 use App\Services\CartService;
 use App\Services\OrderCreationService;
+use App\Services\OrderPaymentInitializationService;
+use App\Models\Order;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
@@ -22,8 +24,14 @@ new class extends Component
     public string $phone_number = '';
     public string $postal_code = '';
     public ?string $createdOrderId = null;
-    public float $processingFee = 0;
-    public float $estimatedTotal = 0;
+   public float $createdOrderTotal = 0;
+   public float $processingFeeEstimate = 0;
+   public float $estimatedCustomerTotal = 0;
+
+   private const PAYSTACK_LOCAL_PERCENTAGE_FEE = 1.5;
+   private const PAYSTACK_LOCAL_FIXED_FEE = 100;
+   private const PAYSTACK_LOCAL_FIXED_FEE_WAIVER_THRESHOLD = 2500;
+   private const PAYSTACK_LOCAL_MAX_FEE = 2000;
 
     public function updated($property)
     {
@@ -45,6 +53,23 @@ new class extends Component
 
     public function mount(CartService $cartService)
     {
+      $this->name = auth()->user() ? auth()->user()->name : '';
+      $this->email = auth()->user() ? auth()->user()->email : '';
+      $sessionOrderId = session('checkout_payment_order_id');
+      if (is_string($sessionOrderId) && $sessionOrderId !== '') {
+         $existingOrder = Order::query()
+            ->where('order_id', $sessionOrderId)
+            ->where('status', Order::STATUS_UNPAID)
+            ->first();
+
+         if ($existingOrder && $this->canAccessCheckoutOrder($existingOrder)) {
+            $this->redirectToPayment($existingOrder);
+            return;
+         }
+
+         session()->forget('checkout_payment_order_id');
+      }
+
         $items = $cartService->items();
 
         if ($items->isEmpty()) {
@@ -65,11 +90,7 @@ new class extends Component
             ->all();
 
         $this->cartTotal = array_sum(array_column($this->cartItems, 'line_total'));
-        $feeRate = 1.5;
-        $this->processingFee = $this->cartTotal > 0
-            ? round($this->cartTotal * ($feeRate / 100), 2)
-            : 0.0;
-        $this->estimatedTotal = $this->cartTotal + $this->processingFee;
+      $this->updateFeeEstimate($this->cartTotal);
     }
 
    public function createOrder(OrderCreationService $orderCreationService)
@@ -82,16 +103,82 @@ new class extends Component
 
         try {
          $order = $orderCreationService->create($validated, auth()->id());
+         session(['checkout_payment_order_id' => $order->order_id]);
          $this->createdOrderId = $order->order_id;
+         $this->createdOrderTotal = (float) $order->total_payable;
+         $this->updateFeeEstimate($this->createdOrderTotal);
          $this->cartItems = [];
          $this->cartTotal = 0;
+         $this->redirectToPayment($order);
       } catch (ValidationException $exception) {
          throw $exception;
       } catch (\Throwable $exception) {
             report($exception);
-         $this->addError('payment', 'We could not create your order. Your cart has been preserved; please try again.');
+         $this->addError('payment', 'We could not create the order or start payment. Please try again.');
         }
     }
+
+   public function continueToPayment(OrderPaymentInitializationService $paymentInitialization): void
+   {
+      if (! $this->createdOrderId || session('checkout_payment_order_id') !== $this->createdOrderId) {
+         abort(404);
+      }
+
+      $order = Order::query()->where('order_id', $this->createdOrderId)->firstOrFail();
+      abort_unless($this->canAccessCheckoutOrder($order), 404);
+
+      $this->redirectToPayment($order, $paymentInitialization);
+   }
+
+   private function redirectToPayment(Order $order, ?OrderPaymentInitializationService $paymentInitialization = null): void
+   {
+      abort_unless($this->canAccessCheckoutOrder($order), 404);
+
+      try {
+         $authorizationUrl = ($paymentInitialization ?? app(OrderPaymentInitializationService::class))->initialize($order);
+         $this->redirect($authorizationUrl, navigate: false);
+      } catch (ValidationException $exception) {
+         $this->addError('payment', $exception->getMessage());
+         $this->createdOrderId = $order->order_id;
+         $this->createdOrderTotal = (float) $order->total_payable;
+         $this->updateFeeEstimate($this->createdOrderTotal);
+      } catch (\Throwable $exception) {
+         report($exception);
+         $this->addError('payment', 'We could not start payment. Please try again later.');
+         $this->createdOrderId = $order->order_id;
+         $this->createdOrderTotal = (float) $order->total_payable;
+         $this->updateFeeEstimate($this->createdOrderTotal);
+      }
+   }
+
+   private function canAccessCheckoutOrder(Order $order): bool
+   {
+      if ($order->user_id !== null) {
+         return auth()->check()
+            && auth()->user()->can('customer')
+            && (int) $order->user_id === (int) auth()->id();
+      }
+
+      return session('checkout_payment_order_id') === $order->order_id
+         && (! auth()->check() || auth()->user()->can('customer'));
+   }
+
+      private function updateFeeEstimate(float $orderAmount): void
+      {
+         if ($orderAmount <= 0) {
+            $this->processingFeeEstimate = 0;
+            $this->estimatedCustomerTotal = 0;
+            return;
+         }
+
+         $fee = $orderAmount * (self::PAYSTACK_LOCAL_PERCENTAGE_FEE / 100);
+         if ($orderAmount >= self::PAYSTACK_LOCAL_FIXED_FEE_WAIVER_THRESHOLD) {
+            $fee += self::PAYSTACK_LOCAL_FIXED_FEE;
+         }
+
+         $this->processingFeeEstimate = round(min($fee, self::PAYSTACK_LOCAL_MAX_FEE), 2);
+         $this->estimatedCustomerTotal = round($orderAmount + $this->processingFeeEstimate, 2);
+      }
 };
 ?>
 
@@ -124,17 +211,24 @@ new class extends Component
       <section class="checkout-area section-space">
          <div class="container">
             @if($createdOrderId)
-               <div class="alert alert-success border-0 shadow-sm p-4" role="status">
-                  <h3 class="h5 fw-bold">Order placed</h3>
-                  <p class="mb-0">Thank you for your order. We will keep your selected items reserved while we prepare the next steps.</p>
-               </div>
+               @error('payment')
+                  <div class="alert alert-danger" role="alert">{{ $message }}</div>
+               @enderror
+               <p class="mb-3">Your order is saved. Continue to payment to complete checkout.</p>
+               <button class="fill-btn mt-3" type="button" wire:click="continueToPayment" wire:loading.attr="disabled" wire:target="continueToPayment">
+                  <span class="fill-btn-inner">
+                     <span class="fill-btn-normal" wire:loading.remove wire:target="continueToPayment">Continue to Paystack</span>
+                     <span class="fill-btn-hover" wire:loading.remove wire:target="continueToPayment">Continue to Paystack</span>
+                     <span wire:loading wire:target="continueToPayment">Connecting to Paystack...</span>
+                  </span>
+               </button>
             @else
             <form wire:submit="createOrder">
                <div class="row">
                   <div class="col-lg-6">
                      <div class="checkbox-form">
                         <h3 class="mb-15">Billing Details</h3>
-                        <div class="row g-5">
+                        <div class="row g-3">
                            <!-- <div class="col-md-12">
                               <div class="country-select">
                                  <label>Country <span class="required">*</span></label>
@@ -150,68 +244,54 @@ new class extends Component
                                  </select>
                               </div>
                            </div> -->
-                           <div class="col-md-6">
-                              <div class="checkout-form-list">
-                                 <label>Name</label>
+                             <div class="col-12 col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-dark small mb-2">Name</label>
                                 <input type="text" placeholder="John Doe" required wire:model.live.debounce.500ms="name" value="{{ auth()->user() ? auth()->user()->name : '' }}">
                                 @error('name')
                                     <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                                 @enderror
-                              </div>
                            </div>
-                           <div class="col-md-6">
-                              <div class="checkout-form-list">
-                                 <label>Email Address</label>
+                             <div class="col-12 col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-dark small mb-2">Email Address</label>
                                 <input type="email" placeholder="email@example.com" required wire:model.live.debounce.500ms="email" inputmode="email" value="{{ auth()->user() ? auth()->user()->email : '' }}">
                                 @error('email')
                                     <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                                 @enderror
                            </div>
-                           </div>
-                           <div class="col-md-6">
-                              <div class="checkout-form-list">
-                                 <label>Phone Number</label>
+                             <div class="col-12 col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-dark small mb-2">Phone Number</label>
                                 <input type="tel" placeholder="08012345678 or +2348012345678" required wire:model.live.debounce.500ms="phone_number" minlength="11" maxlength="14" autocomplete="tel">
                                 @error('phone_number')
                                     <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                                 @enderror
-                              </div>
                            </div>
-                           <div class="col-md-6">
-                              <div class="checkout-form-list">
-                                 <label>Address</label>
+                             <div class="col-12 col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-dark small mb-2">Address</label>
                                 <input type="text" placeholder="23 Jump Street" required wire:model.live.debounce.500ms="address">
                                 @error('address')
                                     <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                                 @enderror
-                              </div>
                            </div>
-                           <div class="col-md-6">
-                              <div class="checkout-form-list">
-                                 <label>State</label>
+                             <div class="col-12 col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-dark small mb-2">State</label>
                                 <input type="text" placeholder="Abia" required wire:model.live.debounce.500ms="state">
                                 @error('state')
                                     <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                                 @enderror
-                              </div>
                            </div>
-                           <div class="col-md-6">
-                              <div class="checkout-form-list">
-                                 <label>Town / City <span class="required">*</span></label>
+                             <div class="col-12 col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-dark small mb-2">Town / City <span class="required">*</span></label>
                                 <input type="text" placeholder="Umuahia" required wire:model.live.debounce.500ms="city">
                                 @error('city')
                                     <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                                 @enderror
-                              </div>
                            </div>
-                           <div class="col-md-6">
-                              <div class="checkout-form-list">
-                                 <label>Postcode / Zip (Optional)</label>
+                             <div class="col-12 col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-dark small mb-2">Postcode / Zip (Optional)</label>
                                 <input type="text" placeholder="Postcode / Zip" wire:model.live.debounce.500ms="postal_code" autocomplete="postal-code">
                                 @error('postal_code')
                                     <div class="invalid-feedback mt-1 d-block">{{ $message }}</div>
                                 @enderror
-                              </div>
                            </div>
                            <!-- <div class="col-md-12">
                               <div class="checkout-form-list create-acc d-flex align-content-center">
@@ -349,6 +429,10 @@ new class extends Component
                                     <th>Cart Subtotal</th>
                                     <td><span class="amount">₦{{ number_format($cartTotal, 2) }}</span></td>
                                  </tr>
+                                 <tr class="processing-fee">
+                                    <th>Estimated Paystack fee</th>
+                                    <td><span class="amount">₦{{ number_format($processingFeeEstimate, 2) }}</span></td>
+                                 </tr>
                                  <!-- 
                                  <tr class="shipping">
                                     <th>Shipping</th>
@@ -367,19 +451,16 @@ new class extends Component
                                        </ul>
                                     </td>
                                  </tr> -->
-                                 <tr class="processing-fee">
-                                    <th>Paystack fee</th>
-                                    <td><span class="amount">₦{{ number_format($processingFee, 2) }}</span></td>
-                                 </tr>
                                  <tr class="order-total">
-                                    <th>Estimated total</th>
-                                    <td><strong><span class="amount">₦{{ number_format($estimatedTotal, 2) }}</span></strong></td>
+                                    <th>Estimated amount charged</th>
+                                    <td><strong><span class="amount">₦{{ number_format($estimatedCustomerTotal, 2) }}</span></strong></td>
                                  </tr>
                               </tfoot>
                            </table>
                         </div>
 
                         <div class="payment-method">
+                           <small class="text-muted d-block mb-3">This fee is an informational estimate only and is not included in the order amount sent to Paystack. Paystack calculates and adds the actual fee at payment.</small>
                            @error('payment')
                               <div class="alert alert-danger" role="alert">{{ $message }}</div>
                            @enderror
